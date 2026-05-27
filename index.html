@@ -442,19 +442,22 @@
       <div class="hdr-title" style="font-size:18px">Ajouter une pièce</div>
     </div>
     <div class="add-scroll">
-      <div class="frow2">
-        <div>
-          <label class="flbl">Marque</label>
-          <select id="a-brand" class="finp" onchange="onBMChange()">
-            <option value="">Choisir…</option>
-            <option>Apple</option><option>Samsung</option><option>Xiaomi</option>
-            <option>Huawei</option><option>OnePlus</option><option>Google</option><option>Autre</option>
-          </select>
+      <div class="fgrp">
+        <label class="flbl">Marque</label>
+        <div class="brand-grid" style="margin-bottom:9px">
+          <div class="brand-btn" data-brand="Apple"   onclick="selBrand('Apple',this)"><div class="brand-ic">🍎</div><span class="brand-name">Apple</span></div>
+          <div class="brand-btn" data-brand="Samsung" onclick="selBrand('Samsung',this)"><div class="brand-ic">🔷</div><span class="brand-name">Samsung</span></div>
+          <div class="brand-btn" data-brand="Xiaomi"  onclick="selBrand('Xiaomi',this)"><div class="brand-ic">📱</div><span class="brand-name">Xiaomi</span></div>
+          <div class="brand-btn" data-brand="Huawei"  onclick="selBrand('Huawei',this)"><div class="brand-ic">🌸</div><span class="brand-name">Huawei</span></div>
         </div>
-        <div>
-          <label class="flbl">Modèle</label>
-          <input type="text" id="a-model" class="finp" placeholder="iPhone 12…" oninput="onBMChange()">
-        </div>
+        <select id="a-brand-other" class="finp" onchange="selBrandOther(this.value)">
+          <option value="">Autre marque…</option>
+          <option>OnePlus</option><option>Google</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Modèle</label>
+        <input type="text" id="a-model" class="finp" placeholder="ex: iPhone 12, Galaxy S21…" oninput="onBMChange()">
       </div>
       <div class="fgrp">
         <label class="flbl">Type de pièce</label>
@@ -487,11 +490,11 @@
         <div class="photo-row">
           <div class="photo-slot" id="ps0" onclick="trigPhoto(0)">
             <span style="font-size:28px;color:var(--text3)">📷</span>
-            <input type="file" id="pi0" accept="image/*" style="display:none" onchange="onPhoto(0,this)">
+            <input type="file" id="pi0" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(0,this)">
           </div>
           <div class="photo-slot" id="ps1" onclick="trigPhoto(1)">
             <span style="font-size:26px;color:var(--text3)">+</span>
-            <input type="file" id="pi1" accept="image/*" style="display:none" onchange="onPhoto(1,this)">
+            <input type="file" id="pi1" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(1,this)">
           </div>
         </div>
       </div>
@@ -546,7 +549,7 @@
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let db = null, allParts = [], brandFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null;
+let db = null, allParts = [], brandFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null;
 
 const BRANDS   = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Autre'];
 const BRAND_IC = { Apple:'🍎', Samsung:'🔷', Xiaomi:'📱', Huawei:'🌸', OnePlus:'🔴', Google:'🌐', Autre:'📦' };
@@ -622,7 +625,7 @@ function subscribe() {
 }
 
 async function savePart() {
-  const brand=document.getElementById('a-brand').value, model=document.getElementById('a-model').value.trim(), type=document.getElementById('a-type').value, notes=document.getElementById('a-notes').value.trim();
+  const brand=curBrand, model=document.getElementById('a-model').value.trim(), type=document.getElementById('a-type').value, notes=document.getElementById('a-notes').value.trim();
   if (!brand||!model||!type) { toast('⚠️ Marque, modèle et type requis'); return; }
   if (!curCond)               { toast("⚠️ Indique l'état"); return; }
   const compatible = Array.from(document.querySelectorAll('.ccheck.on')).map(e=>e.dataset.m);
@@ -739,16 +742,30 @@ function showDetail(id,from) {
 // ADD FORM
 // ═══════════════════════════════════════════════════════
 function resetAdd() {
-  ['a-brand','a-model','a-type','a-notes'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  curCond=null; photos=[null,null];
+  ['a-model','a-type','a-notes','a-brand-other'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  curCond=null; curBrand=null; photos=[null,null];
   document.querySelectorAll('.cond-btn').forEach(b=>b.className='cond-btn');
+  document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
   resetSlot(0); resetSlot(1);
   document.getElementById('compat-sec').style.display='none';
   document.getElementById('compat-list').innerHTML='';
 }
+function selBrand(brand, el) {
+  curBrand = brand;
+  document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('a-brand-other').value = '';
+  onBMChange();
+}
+function selBrandOther(val) {
+  if (!val) return;
+  curBrand = val;
+  document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
+  onBMChange();
+}
 function resetSlot(i) {
   const s=document.getElementById('ps'+i), ic=i===0?'<span style="font-size:28px;color:var(--text3)">📷</span>':'<span style="font-size:26px;color:var(--text3)">+</span>';
-  s.innerHTML=`${ic}<input type="file" id="pi${i}" accept="image/*" style="display:none" onchange="onPhoto(${i},this)">`;
+  s.innerHTML=`${ic}<input type="file" id="pi${i}" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(${i},this)">`;
 }
 function selCond(v) {
   curCond=v;
@@ -763,7 +780,7 @@ function onPhoto(i,inp) {
 }
 function rmPhoto(i,e) { e.stopPropagation(); photos[i]=null; resetSlot(i); }
 function onBMChange() {
-  const brand=document.getElementById('a-brand').value, model=document.getElementById('a-model').value.trim();
+  const brand=curBrand||'', model=document.getElementById('a-model').value.trim();
   const opts=(COMPAT[brand]||{})[model]||[], sec=document.getElementById('compat-sec'), lst=document.getElementById('compat-list');
   if (!opts.length) { sec.style.display='none'; return; }
   sec.style.display='block';
