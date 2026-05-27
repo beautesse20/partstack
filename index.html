@@ -324,6 +324,79 @@
     /* ── SECTION HEAD ──────────────────────────────────── */
     .sec-head { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
     .sep { height: 0.5px; background: var(--border2); margin: 16px 0; }
+
+    /* ── TRANSITIONS D'ÉCRAN ───────────────────────────── */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .screen.active { animation: fadeSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+
+    /* ── DESKTOP : cadre centré ────────────────────────── */
+    @media (min-width: 500px) {
+      body {
+        background: #DDDBD5;
+        display: flex; align-items: center; justify-content: center;
+        min-height: 100dvh;
+      }
+      #app {
+        max-width: 420px; width: 100%;
+        height: min(860px, 96dvh);
+        border-radius: 32px;
+        overflow: hidden;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+      }
+      #screen-setup {
+        border-radius: 32px;
+      }
+    }
+
+    /* ── TOUCH / HOVER FEEDBACK ────────────────────────── */
+    .pcard {
+      transition: transform 0.14s cubic-bezier(0.22,1,0.36,1),
+                  box-shadow 0.14s;
+    }
+    .pcard:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .pcard:active { transform: scale(0.975); box-shadow: none; }
+
+    .chip { transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s; }
+    .chip:active { transform: scale(0.94); }
+
+    .cond-btn { transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s; }
+    .cond-btn:active { transform: scale(0.96); }
+
+    .nav-fab { transition: transform 0.12s, opacity 0.12s; }
+    .nav-fab:hover { opacity: 0.88; }
+    .nav-fab:active { transform: scale(0.92); }
+
+    .btn-primary { transition: transform 0.12s, opacity 0.12s; }
+    .btn-primary:hover { opacity: 0.9; }
+
+    .btn-danger { transition: transform 0.12s, opacity 0.12s; }
+    .btn-danger:active { transform: scale(0.98); }
+
+    .btn-search { transition: transform 0.12s, opacity 0.12s; }
+    .btn-search:hover { opacity: 0.9; }
+    .btn-search:active { transform: scale(0.98); }
+
+    .back-btn { transition: opacity 0.1s, transform 0.1s; }
+    .back-btn:active { opacity: 0.5; transform: translateX(-3px); }
+
+    .ccheck { transition: background 0.15s, color 0.15s, border-color 0.15s; }
+
+    /* Sbar focus */
+    .sbar { transition: border-color 0.15s; }
+    .sbar:focus-within { border-color: var(--accent); border-width: 1px; }
+
+    /* Photo slot hover */
+    .photo-slot { transition: border-color 0.15s, background 0.15s; }
+    .photo-slot:hover { border-color: var(--accent); background: var(--accent-light); }
+
+    /* Nav buttons */
+    .nav-btn { transition: color 0.15s, transform 0.1s; }
+    .nav-btn:active { transform: scale(0.88); }
+    .nav-btn .ni { transition: transform 0.15s; }
+    .nav-btn.on .ni { transform: scale(1.12); }
   </style>
 </head>
 <body>
