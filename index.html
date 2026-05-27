@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PartStack">
+  <meta name="theme-color" content="#1A1A2E">
+  <link rel="manifest" href="manifest.json">
+  <title>PartStack</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #F7F6F3;
+      --card: #FFFFFF;
+      --text: #1A1A1A;
+      --text2: #6B6B6B;
+      --text3: #9B9B9B;
+      --border: rgba(0,0,0,0.10);
+      --border2: rgba(0,0,0,0.06);
+      --accent: #1A1A2E;
+      --accent-light: #EEEEF4;
+      --ok-bg: #F0FDF4;   --ok-text: #166534;   --ok-border: #22C55E;
+      --par-bg: #FFFBEB;  --par-text: #92400E;  --par-border: #F59E0B;
+      --hs-bg:  #FEF2F2;  --hs-text:  #991B1B;  --hs-border: #EF4444;
+      --nav-h: 64px;
+      --hdr-h: 56px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ── APP SHELL ─────────────────────────────────────── */
+    #app { height: 100dvh; display: flex; flex-direction: column; position: relative; }
+
+    .screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .screen.active { display: flex; }
+
+    /* ── HEADER ────────────────────────────────────────── */
+    .hdr {
+      height: var(--hdr-h);
+      min-height: var(--hdr-h);
+      background: var(--card);
+      border-bottom: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 10px;
+      z-index: 10;
+    }
+    .hdr-title { font-size: 17px; font-weight: 600; flex: 1; }
+    .hdr-sub { font-size: 13px; color: var(--text3); }
+    .hdr-icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: none; border: 0.5px solid var(--border);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--text);
+    }
+    .back-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-size: 22px; padding: 4px;
+      display: flex; align-items: center;
+    }
+
+    /* ── SCROLL AREA ───────────────────────────────────── */
+    .scroll {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 16px 32px;
+    }
+
+    /* ── BOTTOM NAV ────────────────────────────────────── */
+    #nav {
+      height: var(--nav-h);
+      min-height: var(--nav-h);
+      background: var(--card);
+      border-top: 0.5px solid var(--border);
+      display: none;
+      align-items: center;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .nav-btn {
+      flex: 1; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; background: none; border: none;
+      cursor: pointer; color: var(--text3); font-size: 10px;
+      transition: color 0.15s;
+    }
+    .nav-btn .ni { font-size: 24px; line-height: 1; }
+    .nav-btn.on { color: var(--accent); }
+    .nav-fab {
+      width: 52px; height: 52px;
+      background: var(--accent); border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; cursor: pointer; color: white;
+      font-size: 30px; flex-shrink: 0; margin: 0 8px;
+    }
+
+    /* ── CARDS ─────────────────────────────────────────── */
+    .pcard {
+      background: var(--card); border-radius: 14px;
+      padding: 13px 14px; border: 0.5px solid var(--border2);
+      margin-bottom: 10px; cursor: pointer;
+      display: flex; gap: 12px; align-items: center;
+      transition: transform 0.1s;
+    }
+    .pcard:active { transform: scale(0.98); }
+    .pcard-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--accent-light); display: flex;
+      align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    }
+    .pcard-info { flex: 1; min-width: 0; }
+    .pcard-ref { font-size: 11px; color: var(--text3); font-family: 'SF Mono','Courier New',monospace; margin-bottom: 2px; }
+    .pcard-name { font-size: 15px; font-weight: 500; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pcard-sub { font-size: 13px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── BADGES ────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    .b-ok      { background: var(--ok-bg);  color: var(--ok-text); }
+    .b-partial { background: var(--par-bg); color: var(--par-text); }
+    .b-broken  { background: var(--hs-bg);  color: var(--hs-text); }
+
+    /* ── SEARCH BAR ────────────────────────────────────── */
+    .sbar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border-radius: 12px;
+      padding: 10px 14px; border: 0.5px solid var(--border2); margin-bottom: 12px;
+    }
+    .sbar input {
+      flex: 1; border: none; outline: none;
+      background: none; font-size: 15px; color: var(--text);
+    }
+    .sbar input::placeholder { color: var(--text3); }
+
+    /* ── CHIPS ─────────────────────────────────────────── */
+    .chips {
+      display: flex; gap: 8px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; margin-bottom: 14px; padding-bottom: 2px;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px;
+      white-space: nowrap; border: 0.5px solid var(--border);
+      background: var(--card); color: var(--text2); cursor: pointer; flex-shrink: 0;
+    }
+    .chip.on { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ── FORM ──────────────────────────────────────────── */
+    .fgrp { margin-bottom: 18px; }
+    .flabel { font-size: 13px; color: var(--text2); margin-bottom: 6px; display: block; font-weight: 500; }
+    .finput {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 0.5px solid var(--border); background: var(--card);
+      font-size: 15px; color: var(--text); outline: none; font-family: inherit;
+      appearance: none;
+    }
+    .finput:focus { border-color: var(--accent); border-width: 1px; }
+    textarea.finput { resize: none; height: 80px; }
+
+    .cond-row { display: flex; gap: 8px; }
+    .cond-btn {
+      flex: 1; padding: 10px 4px; border-radius: 12px;
+      border: 0.5px solid var(--border); background: var(--card);
+      font-size: 13px; cursor: pointer; text-align: center; color: var(--text2);
+    }
+    .cond-ok     { background: var(--ok-bg);  color: var(--ok-text);  border-color: var(--ok-border); }
+    .cond-partial { background: var(--par-bg); color: var(--par-text); border-color: var(--par-border); }
+    .cond-broken  { background: var(--hs-bg);  color: var(--hs-text);  border-color: var(--hs-border); }
+
+    /* ── PHOTOS ────────────────────────────────────────── */
+    .photo-row { display: flex; gap: 12px; }
+    .photo-slot {
+      width: 90px; height: 90px; border-radius: 14px;
+      border: 1.5px dashed var(--border); background: var(--card);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; overflow: hidden; position: relative;
+    }
+    .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-del {
+      position: absolute; top: 5px; right: 5px;
+      width: 22px; height: 22px;
+      background: rgba(0,0,0,0.55); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 13px; cursor: pointer; z-index: 2;
+    }
+
+    /* ── BUTTONS ───────────────────────────────────────── */
+    .btn-primary {
+      width: 100%; padding: 16px; background: var(--accent); color: white;
+      border: none; border-radius: 14px; font-size: 16px; font-weight: 600;
+      cursor: pointer; font-family: inherit; margin-top: 8px;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+    .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+    .btn-danger {
+      width: 100%; padding: 14px; background: var(--hs-bg); color: var(--hs-text);
+      border: 0.5px solid var(--hs-border); border-radius: 14px;
+      font-size: 15px; cursor: pointer; font-family: inherit; margin-top: 8px;
+    }
+
+    /* ── DETAIL ────────────────────────────────────────── */
+    .detail-ref { font-family: 'SF Mono','Courier New',monospace; font-size: 12px; color: var(--text3); margin-bottom: 3px; }
+    .detail-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .detail-sub { font-size: 16px; color: var(--text2); margin-bottom: 10px; }
+
+    .info-grid {
+      background: var(--card); border-radius: 14px;
+      border: 0.5px solid var(--border2); overflow: hidden; margin: 14px 0;
+    }
+    .info-row {
+      display: flex; padding: 12px 16px;
+      border-bottom: 0.5px solid var(--border2); align-items: center;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-lbl { font-size: 14px; color: var(--text2); flex: 1; }
+    .info-val { font-size: 14px; font-weight: 500; text-align: right; max-width: 65%; }
+
+    .thumb-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .thumb { width: 90px; height: 90px; border-radius: 12px; overflow: hidden; cursor: pointer; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── COMPAT TAGS ───────────────────────────────────── */
+    .ctag {
+      display: inline-block; padding: 4px 10px;
+      background: var(--accent-light); color: var(--accent);
+      border-radius: 8px; font-size: 12px; margin: 3px 3px 0 0;
+    }
+    .compat-checks { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ccheck {
+      padding: 7px 14px; border-radius: 10px;
+      border: 0.5px solid var(--border); background: var(--card);
+      font-size: 13px; cursor: pointer; color: var(--text2);
+    }
+    .ccheck.on { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+    /* ── SMART SEARCH ──────────────────────────────────── */
+    .sq-area {
+      width: 100%; padding: 14px; border-radius: 14px;
+      border: 0.5px solid var(--border); background: var(--card);
+      font-size: 15px; color: var(--text); outline: none;
+      font-family: inherit; resize: none; height: 90px; margin-bottom: 12px;
+    }
+    .sq-area:focus { border-color: var(--accent); border-width: 1px; }
+    .btn-search {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: inherit; margin-bottom: 20px;
+    }
+    .match-perfect { border-left: 3px solid var(--ok-border); }
+    .match-close   { border-left: 3px solid var(--par-border); }
+    .match-lbl { font-size: 11px; font-weight: 600; margin-bottom: 3px; }
+    .match-perfect .match-lbl { color: var(--ok-text); }
+    .match-close   .match-lbl { color: var(--par-text); }
+
+    /* ── SETUP ─────────────────────────────────────────── */
+    #screen-setup { height: 100dvh; overflow-y: auto; padding: 28px 16px 40px; }
+    .setup-card {
+      background: var(--card); border-radius: 20px;
+      padding: 22px; border: 0.5px solid var(--border2); margin-bottom: 20px;
+    }
+    .sstep { display: flex; gap: 14px; margin-bottom: 20px; align-items: flex-start; }
+    .sstep:last-child { margin-bottom: 0; }
+    .snum {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .stitle { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .sdesc { font-size: 13px; color: var(--text2); line-height: 1.55; }
+    .sdesc a { color: #0066CC; text-decoration: none; word-break: break-all; }
+    .sdesc code { background: var(--accent-light); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+    /* ── EMPTY / TOAST ─────────────────────────────────── */
+    .empty { text-align: center; padding: 48px 24px; }
+    .empty-ico { font-size: 48px; margin-bottom: 12px; }
+    .empty-title { font-size: 17px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+    .empty-desc { font-size: 14px; color: var(--text3); line-height: 1.6; }
+
+    #toast {
+      position: fixed; bottom: calc(var(--nav-h) + 14px); left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0,0,0,0.82); color: white;
+      padding: 10px 20px; border-radius: 22px; font-size: 14px;
+      z-index: 999; transition: transform 0.25s; white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── LIGHTBOX ──────────────────────────────────────── */
+    #lightbox {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 12px; object-fit: contain; }
+    #lightbox-close {
+      position: absolute; top: 16px; right: 16px;
+      font-size: 32px; color: white; background: none; border: none; cursor: pointer;
+    }
+
+    /* ── SECTION HEAD ──────────────────────────────────── */
+    .sec-head { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+    .sep { height: 0.5px; background: var(--border2); margin: 16px 0; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ SETUP ══════════════════════════════════════════════ -->
+  <div id="screen-setup" class="screen active">
+    <div style="text-align:center;margin-bottom:28px;margin-top:16px">
+      <div style="font-size:54px;margin-bottom:10px">🔧</div>
+      <div style="font-size:26px;font-weight:700;margin-bottom:6px">PartStack</div>
+      <div style="color:var(--text2);font-size:15px;line-height:1.5">Inventaire intelligent de pièces détachées.<br>Configuration unique — 5 min.</div>
+    </div>
+
+    <div class="setup-card">
+      <div class="sstep">
+        <div class="snum">1</div>
+        <div>
+          <div class="stitle">Crée un projet Firebase (gratuit)</div>
+          <div class="sdesc">Va sur <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Nouveau projet → donne-lui un nom (ex: partstack).</div>
+        </div>
+      </div>
+      <div class="sstep">
+        <div class="snum">2</div>
+        <div>
+          <div class="stitle">Active Firestore</div>
+          <div class="sdesc">Dans ton projet → <strong>Build → Firestore Database</strong> → Créer une base de données → <strong>Mode test</strong> → Sélectionner une région (europe-west1) → Activer.</div>
+        </div>
+      </div>
+      <div class="sstep">
+        <div class="snum">3</div>
+        <div>
+          <div class="stitle">Récupère ta config</div>
+          <div class="sdesc">⚙️ Paramètres du projet → <strong>Tes applications</strong> → Ajouter une app (icône <code>&lt;/&gt;</code>) → Enregistre-la → copie le contenu de <code>firebaseConfig</code>.</div>
+        </div>
+      </div>
+      <div class="sstep">
+        <div class="snum">4</div>
+        <div>
+          <div class="stitle">Colle ta config ci-dessous</div>
+          <div class="sdesc">Colle le JSON entre accolades (ou le bloc entier <code>const firebaseConfig = …</code>).</div>
+        </div>
+      </div>
+    </div>
+
+    <textarea id="cfg-input" class="finput" style="height:120px;font-family:monospace;font-size:12px;margin-bottom:8px" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+    <div id="cfg-err" style="color:var(--hs-text);font-size:13px;margin-bottom:8px;display:none"></div>
+    <button class="btn-primary" onclick="initWithConfig()" style="margin-top:0">Connecter →</button>
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px;line-height:1.5">Ta config est stockée uniquement sur ton appareil.<br>Elle ne quitte jamais ce téléphone.</p>
+  </div>
+
+  <!-- ══ INVENTAIRE ════════════════════════════════════════ -->
+  <div id="screen-inventory" class="screen">
+    <div class="hdr">
+      <div class="hdr-title">📦 Inventaire</div>
+      <div class="hdr-sub" id="count-lbl">0 pièce</div>
+    </div>
+    <div class="scroll">
+      <div class="sbar">
+        <span style="font-size:16px;color:var(--text3)">🔍</span>
+        <input type="search" id="inv-q" placeholder="Chercher dans l'inventaire…" oninput="filterInv(this.value)" autocomplete="off">
+      </div>
+      <div class="chips" id="brand-chips">
+        <div class="chip on" onclick="filterBrand('all',this)">Tout</div>
+        <div class="chip" onclick="filterBrand('Apple',this)">Apple</div>
+        <div class="chip" onclick="filterBrand('Samsung',this)">Samsung</div>
+        <div class="chip" onclick="filterBrand('Xiaomi',this)">Xiaomi</div>
+        <div class="chip" onclick="filterBrand('Huawei',this)">Huawei</div>
+        <div class="chip" onclick="filterBrand('Autre',this)">Autre</div>
+      </div>
+      <div id="parts-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ AJOUTER ═══════════════════════════════════════════ -->
+  <div id="screen-add" class="screen">
+    <div class="hdr">
+      <button class="back-btn" onclick="go('inventory')">←</button>
+      <div class="hdr-title">Ajouter une pièce</div>
+    </div>
+    <div class="scroll">
+      <div class="fgrp">
+        <label class="flabel">Marque</label>
+        <select id="a-brand" class="finput" onchange="onBrandModelChange()">
+          <option value="">Choisir…</option>
+          <option>Apple</option><option>Samsung</option><option>Xiaomi</option>
+          <option>Huawei</option><option>OnePlus</option><option>Google</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Modèle exact</label>
+        <input type="text" id="a-model" class="finput" placeholder="ex: iPhone 12, Galaxy S21, Note 20…" oninput="onBrandModelChange()">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Type de pièce</label>
+        <select id="a-type" class="finput">
+          <option value="">Choisir…</option>
+          <option>Batterie</option><option>Écran</option><option>Chassis</option>
+          <option>Caméra</option><option>Connecteur charge</option><option>Haut-parleur</option>
+          <option>Micro</option><option>Vibreur</option><option>Bouton</option>
+          <option>Nappe</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">État</label>
+        <div class="cond-row">
+          <button class="cond-btn" data-v="ok"      onclick="selCond('ok')">✅ Fonctionnel</button>
+          <button class="cond-btn" data-v="partial" onclick="selCond('partial')">⚠️ Partiel</button>
+          <button class="cond-btn" data-v="broken"  onclick="selCond('broken')">❌ HS</button>
+        </div>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Notes (ce qui marche / ce qui ne marche pas)</label>
+        <textarea id="a-notes" class="finput" placeholder="ex: Écran parfait, bouton home bloqué…"></textarea>
+      </div>
+      <div class="fgrp" id="compat-sec" style="display:none">
+        <label class="flabel">Compatible aussi avec (optionnel)</label>
+        <div class="compat-checks" id="compat-list"></div>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Photos (max 2)</label>
+        <div class="photo-row">
+          <div class="photo-slot" id="ps0" onclick="trigPhoto(0)">
+            <span style="font-size:30px;color:var(--text3)">📷</span>
+            <input type="file" id="pi0" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(0,this)">
+          </div>
+          <div class="photo-slot" id="ps1" onclick="trigPhoto(1)">
+            <span style="font-size:26px;color:var(--text3)">+</span>
+            <input type="file" id="pi1" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(1,this)">
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveNewPart()">Enregistrer la pièce</button>
+    </div>
+  </div>
+
+  <!-- ══ DÉTAIL ════════════════════════════════════════════ -->
+  <div id="screen-detail" class="screen">
+    <div class="hdr">
+      <button class="back-btn" id="detail-back" onclick="goBack()">←</button>
+      <div class="hdr-title" id="detail-hdr-title">Détail</div>
+    </div>
+    <div class="scroll" id="detail-body"></div>
+  </div>
+
+  <!-- ══ RECHERCHE ════════════════════════════════════════ -->
+  <div id="screen-search" class="screen">
+    <div class="hdr">
+      <div class="hdr-title">🔍 Recherche intelligente</div>
+    </div>
+    <div class="scroll">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:12px;line-height:1.55">Décris ce dont tu as besoin en langage libre :</p>
+      <textarea id="sq" class="sq-area" placeholder="ex: batterie pour réparer un iPhone 12&#10;ex: chassis Samsung propre pas abîmé&#10;ex: écran fonctionnel Note 20"></textarea>
+      <button class="btn-search" onclick="smartSearch()">Trouver →</button>
+      <div id="sr"></div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div id="nav">
+    <button class="nav-btn on" id="nb-inv" onclick="go('inventory')">
+      <span class="ni">📦</span><span>Inventaire</span>
+    </button>
+    <button class="nav-fab" onclick="go('add')">+</button>
+    <button class="nav-btn" id="nb-search" onclick="go('search')">
+      <span class="ni">🔍</span><span>Rechercher</span>
+    </button>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let db = null;
+let allParts = [];
+let brandFilter = 'all';
+let searchQ = '';
+let prevScreen = 'inventory';
+let curPartId = null;
+let photoData = [null, null];
+let curCond = null;
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('psConfig');
+  if (saved) {
+    try { startApp(JSON.parse(saved)); } catch(e) { /* show setup */ }
+  }
+});
+
+function initWithConfig() {
+  const raw = document.getElementById('cfg-input').value.trim();
+  const errEl = document.getElementById('cfg-err');
+  try {
+    // Accept the full "const firebaseConfig = { … };" or just the JSON object
+    let json = raw;
+    const i = json.indexOf('{');
+    if (i > 0) json = json.slice(i);
+    const j = json.lastIndexOf('}');
+    if (j < json.length - 1) json = json.slice(0, j + 1);
+    const cfg = JSON.parse(json);
+    if (!cfg.projectId || !cfg.apiKey) throw new Error('Champs manquants');
+    localStorage.setItem('psConfig', JSON.stringify(cfg));
+    errEl.style.display = 'none';
+    startApp(cfg);
+  } catch(e) {
+    errEl.textContent = '⚠️ Config invalide — vérifie que tu as bien copié le JSON complet (avec les accolades).';
+    errEl.style.display = 'block';
+  }
+}
+
+function startApp(cfg) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    db = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: false }).catch(() => {});
+
+    document.getElementById('screen-setup').classList.remove('active');
+    document.getElementById('screen-setup').style.display = 'none';
+    document.getElementById('nav').style.display = 'flex';
+    go('inventory');
+    subscribeToparts();
+  } catch(e) {
+    toast('⚠️ Erreur de connexion. Vérifie ta config Firebase.');
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROUTER
+// ═══════════════════════════════════════════════════════════
+const SCREENS = ['setup','inventory','add','detail','search'];
+
+function go(name) {
+  SCREENS.forEach(s => {
+    const el = document.getElementById('screen-' + s);
+    if (el) el.classList.remove('active');
+  });
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  // Nav highlight
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  if (name === 'inventory') document.getElementById('nb-inv')?.classList.add('on');
+  if (name === 'search')    document.getElementById('nb-search')?.classList.add('on');
+
+  if (name === 'add') resetAddForm();
+}
+
+function goBack() {
+  go(prevScreen || 'inventory');
+}
+
+// ═══════════════════════════════════════════════════════════
+// FIRESTORE — REALTIME SUBSCRIPTION
+// ═══════════════════════════════════════════════════════════
+function subscribeToparts() {
+  if (!db) return;
+  db.collection('parts').orderBy('createdAt','desc').onSnapshot(snap => {
+    allParts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderList();
+    updateCount();
+  }, err => {
+    console.error(err);
+    toast('Erreur de synchronisation');
+  });
+}
+
+async function saveNewPart() {
+  const brand = document.getElementById('a-brand').value;
+  const model = document.getElementById('a-model').value.trim();
+  const type  = document.getElementById('a-type').value;
+  const notes = document.getElementById('a-notes').value.trim();
+
+  if (!brand || !model || !type) { toast('⚠️ Marque, modèle et type requis'); return; }
+  if (!curCond) { toast("⚠️ Indique l'état de la pièce"); return; }
+
+  const compatible = Array.from(document.querySelectorAll('.ccheck.on')).map(el => el.dataset.m);
+  const ref = generateRef(brand, model, type);
+  const photos = photoData.filter(Boolean);
+
+  const part = {
+    ref, brand, model, type,
+    condition: curCond,
+    notes, compatible, photos,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection('parts').add(part);
+    toast('✅ ' + ref + ' enregistrée');
+    go('inventory');
+  } catch(e) {
+    toast("Erreur lors de l'enregistrement");
+    console.error(e);
+  }
+}
+
+async function deletePart(id) {
+  if (!confirm('Supprimer cette pièce définitivement ?')) return;
+  try {
+    await db.collection('parts').doc(id).delete();
+    toast('Pièce supprimée');
+    go('inventory');
+  } catch(e) {
+    toast('Erreur lors de la suppression');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// REFERENCE GENERATOR
+// ═══════════════════════════════════════════════════════════
+const BRAND_CODE = { Apple:'A', Samsung:'SA', Xiaomi:'XI', Huawei:'HU', OnePlus:'OP', Google:'GO', Autre:'AU' };
+const TYPE_CODE  = {
+  'Batterie':'BAT','Écran':'ECR','Chassis':'CHA','Caméra':'CAM',
+  'Connecteur charge':'CON','Haut-parleur':'HAP','Micro':'MIC',
+  'Vibreur':'VIB','Bouton':'BUT','Nappe':'NAP','Autre':'AUT'
+};
+
+function modelShort(model) {
+  return model
+    .replace(/iphone/i,'')
+    .replace(/galaxy/i,'')
+    .replace(/redmi/i,'R')
+    .replace(/[^0-9A-Za-z+]/g,'')
+    .toUpperCase()
+    .slice(0, 5);
+}
+
+function generateRef(brand, model, type) {
+  const b = BRAND_CODE[brand] || 'AU';
+  const m = modelShort(model);
+  const t = TYPE_CODE[type] || 'AUT';
+  const base = `${b}${m}-${t}`;
+  const n = allParts.filter(p => p.ref && p.ref.startsWith(base + '-')).length + 1;
+  return `${base}-${n}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INVENTORY
+// ═══════════════════════════════════════════════════════════
+function renderList() {
+  let parts = [...allParts];
+
+  if (brandFilter !== 'all') parts = parts.filter(p => p.brand === brandFilter);
+
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    parts = parts.filter(p =>
+      [p.model, p.brand, p.type, p.ref, p.notes].some(f => (f||'').toLowerCase().includes(q))
+    );
+  }
+
+  const el = document.getElementById('parts-list');
+
+  if (!parts.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-ico">📦</div>
+      <div class="empty-title">${allParts.length ? 'Aucun résultat' : 'Inventaire vide'}</div>
+      <div class="empty-desc">${allParts.length ? 'Essaie un autre filtre.' : 'Appuie sur + pour ajouter ta première pièce.'}</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = parts.map(p => `
+    <div class="pcard" onclick="showDetail('${p.id}','inventory')">
+      <div class="pcard-icon">${typeEmoji(p.type)}</div>
+      <div class="pcard-info">
+        <div class="pcard-ref">${p.ref||''}</div>
+        <div class="pcard-name">${p.type} — ${p.model}</div>
+        <div class="pcard-sub">${p.brand}${p.notes?' · '+p.notes.slice(0,45)+(p.notes.length>45?'…':''):''}</div>
+      </div>
+      <span class="badge ${badgeClass(p.condition)}">${condLbl(p.condition)}</span>
+    </div>`).join('');
+}
+
+function updateCount() {
+  const n = allParts.length;
+  document.getElementById('count-lbl').textContent = n + ' pièce' + (n !== 1 ? 's' : '');
+}
+
+function filterInv(v) { searchQ = v; renderList(); }
+
+function filterBrand(b, el) {
+  brandFilter = b;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DETAIL
+// ═══════════════════════════════════════════════════════════
+function showDetail(id, from) {
+  prevScreen = from || 'inventory';
+  curPartId = id;
+  const p = allParts.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('detail-hdr-title').textContent = p.ref || 'Détail';
+
+  const photos = p.photos || [];
+  const photoHtml = photos.length
+    ? `<div class="thumb-row">${photos.map(src => `<div class="thumb" onclick="openLightbox('${src}')"><img src="${src}" alt="photo"></div>`).join('')}</div>`
+    : '';
+
+  const compatHtml = (p.compatible||[]).length
+    ? `<div style="margin-bottom:14px"><div class="sec-head">Compatible avec</div><div>${(p.compatible||[]).map(m=>`<span class="ctag">${m}</span>`).join('')}</div></div>`
+    : '';
+
+  document.getElementById('detail-body').innerHTML = `
+    ${photoHtml}
+    <div style="margin-bottom:4px">
+      <div class="detail-ref">${p.ref||''}</div>
+      <div class="detail-name">${p.type}</div>
+      <div class="detail-sub">${p.brand} · ${p.model}</div>
+      <span class="badge ${badgeClass(p.condition)}">${condLbl(p.condition)}</span>
+    </div>
+    <div class="info-grid">
+      <div class="info-row"><span class="info-lbl">Marque</span><span class="info-val">${p.brand}</span></div>
+      <div class="info-row"><span class="info-lbl">Modèle</span><span class="info-val">${p.model}</span></div>
+      <div class="info-row"><span class="info-lbl">Type</span><span class="info-val">${p.type}</span></div>
+      <div class="info-row"><span class="info-lbl">État</span><span class="info-val"><span class="badge ${badgeClass(p.condition)}">${condLbl(p.condition)}</span></span></div>
+      ${p.notes?`<div class="info-row"><span class="info-lbl">Notes</span><span class="info-val">${p.notes}</span></div>`:''}
+      <div class="info-row"><span class="info-lbl">Référence</span><span class="info-val" style="font-family:monospace">${p.ref||''}</span></div>
+    </div>
+    ${compatHtml}
+    <button class="btn-danger" onclick="deletePart('${p.id}')">🗑 Supprimer cette pièce</button>
+  `;
+
+  go('detail');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADD FORM
+// ═══════════════════════════════════════════════════════════
+function resetAddForm() {
+  ['a-brand','a-model','a-type','a-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  curCond = null;
+  photoData = [null, null];
+  document.querySelectorAll('.cond-btn').forEach(b => b.className = 'cond-btn');
+  resetPhotoSlot(0); resetPhotoSlot(1);
+  document.getElementById('compat-sec').style.display = 'none';
+  document.getElementById('compat-list').innerHTML = '';
+}
+
+function resetPhotoSlot(i) {
+  const slot = document.getElementById('ps' + i);
+  const icon = i === 0 ? '<span style="font-size:30px;color:var(--text3)">📷</span>' : '<span style="font-size:26px;color:var(--text3)">+</span>';
+  slot.innerHTML = `${icon}<input type="file" id="pi${i}" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(${i},this)">`;
+}
+
+function selCond(v) {
+  curCond = v;
+  document.querySelectorAll('.cond-btn').forEach(b => b.className = 'cond-btn');
+  document.querySelector(`.cond-btn[data-v="${v}"]`).className = `cond-btn cond-${v}`;
+}
+
+function trigPhoto(i) { document.getElementById('pi' + i).click(); }
+
+function onPhoto(i, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 500;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+      else        { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const data = canvas.toDataURL('image/jpeg', 0.65);
+      photoData[i] = data;
+      const slot = document.getElementById('ps' + i);
+      slot.innerHTML = `<img src="${data}" alt="photo">
+        <div class="photo-del" onclick="removePhoto(${i},event)">✕</div>
+        <input type="file" id="pi${i}" accept="image/*" style="display:none" onchange="onPhoto(${i},this)">`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(i, e) {
+  e.stopPropagation();
+  photoData[i] = null;
+  resetPhotoSlot(i);
+}
+
+// ── Compatible-with suggestions ──────────────────────────
+const COMPAT_MAP = {
+  Apple: {
+    'iPhone 12':     ['iPhone 12 Mini','iPhone 12 Pro'],
+    'iPhone 12 Pro': ['iPhone 12','iPhone 12 Pro Max'],
+    'iPhone 13':     ['iPhone 13 Mini','iPhone 13 Pro'],
+    'iPhone 13 Pro': ['iPhone 13','iPhone 13 Pro Max'],
+    'iPhone 14':     ['iPhone 14 Plus'],
+    'iPhone 14 Pro': ['iPhone 14 Pro Max'],
+    'iPhone 11':     ['iPhone 11 Pro'],
+    'iPhone X':      ['iPhone XS'],
+    'iPhone XS':     ['iPhone X','iPhone XS Max'],
+    'iPhone SE':     ['iPhone SE (2ème gen)','iPhone SE (3ème gen)'],
+  },
+  Samsung: {
+    'Galaxy S21':    ['Galaxy S21+','Galaxy S21 FE'],
+    'Galaxy S22':    ['Galaxy S22+','Galaxy S22 Ultra'],
+    'Galaxy S23':    ['Galaxy S23+','Galaxy S23 FE'],
+    'Galaxy A52':    ['Galaxy A52s','Galaxy A52 5G'],
+    'Galaxy Note 20':['Galaxy Note 20 Ultra'],
+  }
+};
+
+function onBrandModelChange() {
+  const brand = document.getElementById('a-brand').value;
+  const model = document.getElementById('a-model').value.trim();
+  const opts   = COMPAT_MAP[brand]?.[model] || [];
+  const sec    = document.getElementById('compat-sec');
+  const list   = document.getElementById('compat-list');
+  if (!opts.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  list.innerHTML = opts.map(m =>
+    `<div class="ccheck" data-m="${m}" onclick="this.classList.toggle('on')">${m}</div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SMART SEARCH
+// ═══════════════════════════════════════════════════════════
+function smartSearch() {
+  const query = document.getElementById('sq').value.trim().toLowerCase();
+  const out   = document.getElementById('sr');
+  if (!query) return;
+
+  if (!allParts.length) {
+    out.innerHTML = '<div class="empty"><div class="empty-title">Inventaire vide</div><div class="empty-desc">Ajoute des pièces d\'abord.</div></div>';
+    return;
+  }
+
+  const tokens = query.split(/\s+/).filter(t => t.length > 1);
+
+  const scored = allParts.map(p => {
+    let score = 0;
+    const text = [p.brand, p.model, p.type, p.notes, p.ref, ...(p.compatible||[])].map(x => (x||'').toLowerCase()).join(' ');
+
+    tokens.forEach(tok => {
+      if (!text.includes(tok)) return;
+      score += 2;
+      if ((p.model||'').toLowerCase().includes(tok)) score += 4;
+      if ((p.type ||'').toLowerCase().includes(tok)) score += 3;
+      if ((p.brand||'').toLowerCase().includes(tok)) score += 2;
+      if ((p.compatible||[]).some(c => c.toLowerCase().includes(tok))) score += 1;
+    });
+
+    if (p.condition === 'ok')      score += 0.5;
+    if (p.condition === 'partial') score += 0.1;
+
+    return { p, score };
+  }).filter(s => s.score > 0).sort((a,b) => b.score - a.score);
+
+  if (!scored.length) {
+    out.innerHTML = `<div class="empty">
+      <div class="empty-ico">🤔</div>
+      <div class="empty-title">Aucun résultat</div>
+      <div class="empty-desc">Essaie d'autres termes (marque, modèle, type…).</div>
+    </div>`;
+    return;
+  }
+
+  const maxS = scored[0].score;
+  out.innerHTML = `<div class="sec-head">${scored.length} résultat${scored.length>1?'s':''}</div>` +
+    scored.map(({ p, score }) => {
+      const perf  = score >= maxS * 0.75;
+      const cls   = perf ? 'match-perfect' : 'match-close';
+      const label = perf ? '✓ Correspondance parfaite' : '~ Correspondance proche';
+      return `<div class="pcard ${cls}" onclick="showDetail('${p.id}','search')">
+        <div class="pcard-icon">${typeEmoji(p.type)}</div>
+        <div class="pcard-info">
+          <div class="match-lbl">${label}</div>
+          <div class="pcard-ref">${p.ref||''}</div>
+          <div class="pcard-name">${p.type} — ${p.model}</div>
+          <div class="pcard-sub">${p.brand}${p.notes?' · '+p.notes.slice(0,40)+(p.notes.length>40?'…':''):''}</div>
+        </div>
+        <span class="badge ${badgeClass(p.condition)}">${condLbl(p.condition)}</span>
+      </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// LIGHTBOX
+// ═══════════════════════════════════════════════════════════
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+const EMOJI = { 'Batterie':'🔋','Écran':'📱','Chassis':'📱','Caméra':'📷','Connecteur charge':'🔌','Haut-parleur':'🔊','Micro':'🎙️','Vibreur':'📳','Bouton':'⚙️','Nappe':'🔗','Autre':'🔧' };
+function typeEmoji(t) { return EMOJI[t] || '🔧'; }
+function condLbl(c)   { return { ok:'OK', partial:'Partiel', broken:'HS' }[c] || 'OK'; }
+function badgeClass(c){ return { ok:'b-ok', partial:'b-partial', broken:'b-broken' }[c] || 'b-ok'; }
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
