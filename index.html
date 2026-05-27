@@ -328,15 +328,40 @@
     .sdesc a { color:#0066CC; }
     .sdesc code { background:var(--bg); padding:2px 5px; border-radius:5px; font-size:12px; }
 
+    /* ── TYPE GRID ── */
+    .type-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:9px; }
+    .type-btn {
+      background:var(--card); border-radius:var(--r-md);
+      padding:11px 4px; border:0.5px solid var(--border);
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+      cursor:pointer; transition:background .15s, border-color .15s, transform .1s;
+    }
+    .type-btn:active { transform:scale(0.94); }
+    .type-btn.on { background:var(--accent); border-color:var(--accent); }
+    .type-btn .t-ic { font-size:20px; line-height:1; }
+    .type-btn .t-nm { font-size:10px; font-weight:700; color:var(--text2); text-align:center; line-height:1.2; }
+    .type-btn.on .t-nm { color:#fff; }
+
+    /* ── REF PREVIEW ── */
+    .ref-preview {
+      display:none; align-items:center; gap:10px;
+      background:var(--acc-lt); border-radius:var(--r-md);
+      padding:12px 16px; margin-bottom:10px;
+    }
+    .ref-preview.show { display:flex; }
+    .ref-preview-lbl { font-size:12px; color:var(--text3); flex-shrink:0; }
+    .ref-preview-val { font-size:16px; font-weight:700; color:var(--accent); font-family:'SF Mono','Courier New',monospace; }
+
     /* ── TOAST ── */
     #toast {
       position:fixed; bottom:calc(var(--nav-h) + 14px); left:50%;
-      transform:translateX(-50%) translateY(100px);
+      transform:translateX(-50%) translateY(120px);
+      opacity:0;
       background:rgba(0,0,0,.84); color:#fff;
       padding:11px 20px; border-radius:24px; font-size:14px;
-      z-index:999; transition:transform .25s; white-space:nowrap; pointer-events:none;
+      z-index:999; transition:transform .28s, opacity .28s; white-space:nowrap; pointer-events:none;
     }
-    #toast.show { transform:translateX(-50%) translateY(0); }
+    #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
 
     /* ── LIGHTBOX ── */
     #lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; align-items:center; justify-content:center; }
@@ -461,11 +486,19 @@
       </div>
       <div class="fgrp">
         <label class="flbl">Type de pièce</label>
-        <select id="a-type" class="finp">
-          <option value="">Choisir…</option>
-          <option>Batterie</option><option>Écran</option><option>Chassis</option>
-          <option>Caméra</option><option>Connecteur charge</option><option>Haut-parleur</option>
-          <option>Micro</option><option>Vibreur</option><option>Bouton</option>
+        <div class="type-grid">
+          <div class="type-btn" data-type="Batterie"          onclick="selType('Batterie',this)">          <span class="t-ic">🔋</span><span class="t-nm">Batterie</span></div>
+          <div class="type-btn" data-type="Écran"             onclick="selType('Écran',this)">             <span class="t-ic">🖥️</span><span class="t-nm">Écran</span></div>
+          <div class="type-btn" data-type="Chassis"           onclick="selType('Chassis',this)">           <span class="t-ic">📲</span><span class="t-nm">Chassis</span></div>
+          <div class="type-btn" data-type="Caméra"            onclick="selType('Caméra',this)">            <span class="t-ic">📷</span><span class="t-nm">Caméra</span></div>
+          <div class="type-btn" data-type="Connecteur charge" onclick="selType('Connecteur charge',this)"> <span class="t-ic">🔌</span><span class="t-nm">Connecteur</span></div>
+          <div class="type-btn" data-type="Haut-parleur"      onclick="selType('Haut-parleur',this)">      <span class="t-ic">🔊</span><span class="t-nm">H-parleur</span></div>
+          <div class="type-btn" data-type="Micro"             onclick="selType('Micro',this)">             <span class="t-ic">🎙</span><span class="t-nm">Micro</span></div>
+          <div class="type-btn" data-type="Vibreur"           onclick="selType('Vibreur',this)">           <span class="t-ic">📳</span><span class="t-nm">Vibreur</span></div>
+          <div class="type-btn" data-type="Bouton"            onclick="selType('Bouton',this)">            <span class="t-ic">⚙️</span><span class="t-nm">Bouton</span></div>
+        </div>
+        <select id="a-type-other" class="finp" onchange="selTypeOther(this.value)">
+          <option value="">Autre type…</option>
           <option>Nappe</option><option>Autre</option>
         </select>
       </div>
@@ -498,7 +531,11 @@
           </div>
         </div>
       </div>
-      <button class="btn-save" onclick="savePart()">Enregistrer la pièce</button>
+      <div class="ref-preview" id="ref-preview">
+        <span class="ref-preview-lbl">Référence :</span>
+        <span class="ref-preview-val" id="ref-preview-val"></span>
+      </div>
+      <button class="btn-save" id="save-btn" onclick="savePart()">Enregistrer la pièce</button>
     </div>
   </div>
 
@@ -507,6 +544,7 @@
     <div class="hdr">
       <button class="back-btn" onclick="goBack()">←</button>
       <div class="hdr-title" id="detail-hdr" style="font-size:16px;font-family:monospace;font-weight:500"></div>
+      <button class="back-btn" onclick="showEditForm(curPartId)" style="font-size:18px">✏️</button>
     </div>
     <div class="detail-scroll" id="detail-body"></div>
   </div>
@@ -549,7 +587,7 @@
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let db = null, allParts = [], brandFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null;
+let db = null, allParts = [], brandFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
 
 const BRANDS   = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Autre'];
 const BRAND_IC = { Apple:'🍎', Samsung:'🔷', Xiaomi:'📱', Huawei:'🌸', OnePlus:'🔴', Google:'🌐', Autre:'📦' };
@@ -625,14 +663,20 @@ function subscribe() {
 }
 
 async function savePart() {
-  const brand=curBrand, model=document.getElementById('a-model').value.trim(), type=document.getElementById('a-type').value, notes=document.getElementById('a-notes').value.trim();
+  const brand=curBrand, model=document.getElementById('a-model').value.trim(), type=curType, notes=document.getElementById('a-notes').value.trim();
   if (!brand||!model||!type) { toast('⚠️ Marque, modèle et type requis'); return; }
   if (!curCond)               { toast("⚠️ Indique l'état"); return; }
   const compatible = Array.from(document.querySelectorAll('.ccheck.on')).map(e=>e.dataset.m);
-  const ref = genRef(brand,model,type);
+  const pData = { brand, model, type, condition:curCond, notes, compatible, photos:photos.filter(Boolean) };
   try {
-    await db.collection('parts').add({ ref, brand, model, type, condition:curCond, notes, compatible, photos:photos.filter(Boolean), createdAt:firebase.firestore.FieldValue.serverTimestamp() });
-    toast('✅ '+ref+' enregistrée'); go('inventory');
+    if (editPartId) {
+      await db.collection('parts').doc(editPartId).update(pData);
+      toast('✅ Pièce modifiée'); editPartId=null; go('inventory');
+    } else {
+      const ref = genRef(brand,model,type);
+      await db.collection('parts').add({ ref, ...pData, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+      toast('✅ '+ref+' enregistrée'); go('inventory');
+    }
   } catch(e) { toast("Erreur d'enregistrement"); console.error(e); }
 }
 
@@ -742,26 +786,86 @@ function showDetail(id,from) {
 // ADD FORM
 // ═══════════════════════════════════════════════════════
 function resetAdd() {
-  ['a-model','a-type','a-notes','a-brand-other'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  curCond=null; curBrand=null; photos=[null,null];
+  ['a-model','a-notes','a-brand-other','a-type-other'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  curCond=null; curBrand=null; curType=null; editPartId=null; photos=[null,null];
   document.querySelectorAll('.cond-btn').forEach(b=>b.className='cond-btn');
   document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
   resetSlot(0); resetSlot(1);
   document.getElementById('compat-sec').style.display='none';
   document.getElementById('compat-list').innerHTML='';
+  document.getElementById('ref-preview').classList.remove('show');
+  const hdr=document.querySelector('#screen-add .hdr-title'); if(hdr) hdr.textContent='Ajouter une pièce';
+  const btn=document.getElementById('save-btn'); if(btn) btn.textContent='Enregistrer la pièce';
 }
 function selBrand(brand, el) {
   curBrand = brand;
   document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
   document.getElementById('a-brand-other').value = '';
-  onBMChange();
+  onBMChange(); updateRefPreview();
 }
 function selBrandOther(val) {
   if (!val) return;
   curBrand = val;
   document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
-  onBMChange();
+  onBMChange(); updateRefPreview();
+}
+function selType(type, el) {
+  curType = type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('a-type-other').value = '';
+  updateRefPreview();
+}
+function selTypeOther(val) {
+  if (!val) return;
+  curType = val;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
+  updateRefPreview();
+}
+function updateRefPreview() {
+  const model = document.getElementById('a-model').value.trim();
+  const prev  = document.getElementById('ref-preview');
+  const val   = document.getElementById('ref-preview-val');
+  if (curBrand && model && curType) {
+    const ref = editPartId
+      ? (allParts.find(p=>p.id===editPartId)?.ref || genRef(curBrand,model,curType))
+      : genRef(curBrand, model, curType);
+    val.textContent = ref;
+    prev.classList.add('show');
+  } else {
+    prev.classList.remove('show');
+  }
+}
+function showEditForm(id) {
+  const p = allParts.find(x=>x.id===id); if (!p) return;
+  prevScreen = 'detail';
+  editPartId = id;
+  resetAdd();
+  editPartId = id; // resetAdd l'efface, on le remet
+  // Brand
+  const brandBtn = document.querySelector(`.brand-btn[data-brand="${p.brand}"]`);
+  if (brandBtn) { curBrand=p.brand; brandBtn.classList.add('on'); }
+  else { curBrand=p.brand; document.getElementById('a-brand-other').value=p.brand; }
+  // Model
+  document.getElementById('a-model').value = p.model||'';
+  // Type
+  const typeBtn = document.querySelector(`.type-btn[data-type="${p.type}"]`);
+  if (typeBtn) { curType=p.type; typeBtn.classList.add('on'); }
+  else { curType=p.type; document.getElementById('a-type-other').value=p.type; }
+  // Condition
+  if (p.condition) selCond(p.condition);
+  // Notes
+  document.getElementById('a-notes').value = p.notes||'';
+  // Photos
+  photos = [null, null];
+  (p.photos||[]).forEach((src,i)=>{ if(i>1)return; photos[i]=src; const s=document.getElementById('ps'+i); s.innerHTML=`<img src="${src}" alt="" style="cursor:pointer" onclick="openLb('${src}')"><div class="photo-del" onclick="rmPhoto(${i},event)">✕</div><input type="file" id="pi${i}" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(${i},this)">`; });
+  // Header + bouton
+  const hdr=document.querySelector('#screen-add .hdr-title'); if(hdr) hdr.textContent='Modifier la pièce';
+  const btn=document.getElementById('save-btn'); if(btn) btn.textContent='Enregistrer les modifications';
+  onBMChange(); updateRefPreview();
+  go('add');
 }
 function resetSlot(i) {
   const s=document.getElementById('ps'+i), ic=i===0?'<span style="font-size:28px;color:var(--text3)">📷</span>':'<span style="font-size:26px;color:var(--text3)">+</span>';
