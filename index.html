@@ -647,7 +647,7 @@ function go(name) {
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   if (name==='inventory') document.getElementById('nb-inv')?.classList.add('on');
   if (name==='search')    document.getElementById('nb-srch')?.classList.add('on');
-  if (name==='add') resetAdd();
+  if (name==='add' && !editPartId) resetAdd();
 }
 function goBack() { go(prevScreen||'inventory'); }
 
@@ -864,7 +864,15 @@ function showEditForm(id) {
   // Header + bouton
   const hdr=document.querySelector('#screen-add .hdr-title'); if(hdr) hdr.textContent='Modifier la pièce';
   const btn=document.getElementById('save-btn'); if(btn) btn.textContent='Enregistrer les modifications';
-  onBMChange(); updateRefPreview();
+  onBMChange();
+  // Re-cocher les compatibilités sauvegardées
+  if ((p.compatible||[]).length) {
+    (p.compatible).forEach(m=>{
+      const chk=document.querySelector(`.ccheck[data-m="${m}"]`);
+      if(chk) chk.classList.add('on');
+    });
+  }
+  updateRefPreview();
   go('add');
 }
 function resetSlot(i) {
