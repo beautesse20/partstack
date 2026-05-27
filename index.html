@@ -539,19 +539,20 @@ function initWithConfig() {
   const raw = document.getElementById('cfg-input').value.trim();
   const errEl = document.getElementById('cfg-err');
   try {
-    // Accept the full "const firebaseConfig = { … };" or just the JSON object
-    let json = raw;
-    const i = json.indexOf('{');
-    if (i > 0) json = json.slice(i);
-    const j = json.lastIndexOf('}');
-    if (j < json.length - 1) json = json.slice(0, j + 1);
-    const cfg = JSON.parse(json);
+    // Extract the object literal between the first { and last }
+    let objStr = raw;
+    const i = objStr.indexOf('{');
+    if (i >= 0) objStr = objStr.slice(i);
+    const j = objStr.lastIndexOf('}');
+    if (j >= 0) objStr = objStr.slice(0, j + 1);
+    // Firebase config uses JS object syntax (unquoted keys) — eval it safely
+    const cfg = new Function('return (' + objStr + ')')();
     if (!cfg.projectId || !cfg.apiKey) throw new Error('Champs manquants');
     localStorage.setItem('psConfig', JSON.stringify(cfg));
     errEl.style.display = 'none';
     startApp(cfg);
   } catch(e) {
-    errEl.textContent = '⚠️ Config invalide — vérifie que tu as bien copié le JSON complet (avec les accolades).';
+    errEl.textContent = '⚠️ Config invalide — vérifie que tu as bien copié le bloc firebaseConfig complet.';
     errEl.style.display = 'block';
   }
 }
