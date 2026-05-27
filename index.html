@@ -339,8 +339,8 @@
     }
     .screen.active { animation: fadeSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
 
-    /* ── DESKTOP : cadre centré ────────────────────────── */
-    @media (min-width: 500px) {
+    /* ── DESKTOP : cadre centré (souris uniquement, pas tactile) ── */
+    @media (hover: hover) and (pointer: fine) {
       body {
         background: #DDDBD5;
         display: flex; align-items: center; justify-content: center;
@@ -353,9 +353,7 @@
         overflow: hidden;
         box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
       }
-      #screen-setup {
-        border-radius: 32px;
-      }
+      #screen-setup { border-radius: 32px; }
     }
 
     /* ── TOUCH / HOVER FEEDBACK ────────────────────────── */
