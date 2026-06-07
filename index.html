@@ -387,53 +387,7 @@
 <div id="app">
 
   <!-- ══ SETUP ══════════════════════════════════════════════ -->
-  <div id="screen-setup" class="screen active">
-    <div class="setup-logo">
-      <div style="font-size:56px;margin-bottom:10px">🔧</div>
-      <div style="font-size:28px;font-weight:700;margin-bottom:6px">PartStack</div>
-      <div style="color:var(--text2);font-size:15px;line-height:1.5">Inventaire intelligent de pièces détachées.<br>Configuration unique — 5 min.</div>
-    </div>
-
-    <div class="setup-card">
-      <div class="sstep">
-        <div class="snum">1</div>
-        <div>
-          <div class="stitle">Crée un projet Firebase</div>
-          <div class="sdesc">Va sur <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Nouveau projet (gratuit, compte Google requis).</div>
-        </div>
-      </div>
-      <div class="sstep">
-        <div class="snum">2</div>
-        <div>
-          <div class="stitle">Active Firestore</div>
-          <div class="sdesc"><strong>Build → Firestore Database</strong> → Créer → Mode test → Région europe-west → Activer.</div>
-        </div>
-      </div>
-      <div class="sstep">
-        <div class="snum">3</div>
-        <div>
-          <div class="stitle">Récupère ta config</div>
-          <div class="sdesc">⚙️ Paramètres → <strong>Tes applications</strong> → icône <code>&lt;/&gt;</code> → Enregistre → copie le bloc <code>firebaseConfig</code>.</div>
-        </div>
-      </div>
-      <div class="sstep">
-        <div class="snum">4</div>
-        <div>
-          <div class="stitle">Colle ta config ci-dessous</div>
-          <div class="sdesc">Colle le JSON ou le bloc <code>const firebaseConfig = …</code> complet.</div>
-        </div>
-      </div>
-    </div>
-
-    <textarea id="cfg-in" class="finp" style="height:120px;font-family:monospace;font-size:12px;margin-bottom:8px" placeholder='{
-  "apiKey": "...",
-  "projectId": "...",
-  ...
-}'></textarea>
-    <div id="cfg-err" style="color:var(--hs-tx);font-size:13px;margin-bottom:8px;display:none"></div>
-    <button class="btn-save" style="margin-top:0" onclick="initWithConfig()">Connecter →</button>
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px;line-height:1.5">Config stockée uniquement sur cet appareil.</p>
-  </div>
+  <div id="screen-setup" class="screen" style="display:none"></div>
 
   <!-- ══ INVENTAIRE ════════════════════════════════════════ -->
   <div id="screen-inventory" class="screen">
@@ -599,34 +553,24 @@ const COMPAT   = {
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  const s = localStorage.getItem('psConfig');
-  if (s) { try { startApp(JSON.parse(s)); } catch(e){} }
-});
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAW112uEqUTDtgfVmrf7GSBuGAnReoH4fE",
+  authDomain: "partstack.firebaseapp.com",
+  projectId: "partstack",
+  storageBucket: "partstack.firebasestorage.app",
+  messagingSenderId: "1011017365162",
+  appId: "1:1011017365162:web:30abfd0ac4192aa2d382d3"
+};
 
-function initWithConfig() {
-  const raw = document.getElementById('cfg-in').value.trim();
-  const err = document.getElementById('cfg-err');
-  try {
-    let j = raw; const i = j.indexOf('{'); if (i>=0) j=j.slice(i);
-    const k = j.lastIndexOf('}'); if (k>=0) j=j.slice(0,k+1);
-    const cfg = new Function('return ('+j+')')();
-    if (!cfg.projectId||!cfg.apiKey) throw 0;
-    localStorage.setItem('psConfig', JSON.stringify(cfg));
-    err.style.display='none'; startApp(cfg);
-  } catch(e) {
-    err.textContent='⚠️ Config invalide — vérifie que tu as bien copié le bloc complet.';
-    err.style.display='block';
-  }
-}
+window.addEventListener('DOMContentLoaded', () => {
+  startApp(FIREBASE_CONFIG);
+});
 
 function startApp(cfg) {
   try {
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
     db.enablePersistence({synchronizeTabs:false}).catch(()=>{});
-    document.getElementById('screen-setup').classList.remove('active');
-    document.getElementById('screen-setup').style.display='none';
     document.getElementById('nav').style.display='flex';
     go('inventory');
     subscribe();
