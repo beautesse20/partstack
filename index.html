@@ -580,6 +580,24 @@ const FIREBASE_CONFIG = {
   appId: "1:1011017365162:web:30abfd0ac4192aa2d382d3"
 };
 
+// ── Cloudinary (mêmes réglages que StockVault) : on stocke des URLs légères,
+//    plus de base64 dans Firestore → chargement de l'inventaire bien plus rapide.
+const CLOUDINARY = { cloud: "di6qnlcgy", preset: "sjfvdj53" };
+async function uploadCloudinary(dataUrl) {
+  const fd = new FormData();
+  fd.append("file", dataUrl);
+  fd.append("upload_preset", CLOUDINARY.preset);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloud}/image/upload`, { method: "POST", body: fd });
+  const j = await res.json();
+  if (!res.ok || !j.secure_url) throw new Error((j && j.error && j.error.message) || "upload échoué");
+  return j.secure_url;
+}
+function optim(url, w) {
+  if (!url || typeof url !== "string" || !url.includes("/upload/")) return url;
+  if (url.includes("/upload/f_auto")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   startApp(FIREBASE_CONFIG);
 });
@@ -719,7 +737,7 @@ function showDetail(id,from) {
   prevScreen=from||'inventory'; curPartId=id;
   const p=allParts.find(x=>x.id===id); if (!p) return;
   document.getElementById('detail-hdr').textContent=p.ref||'Détail';
-  const ph=(p.photos||[]).length?`<div class="thumb-row">${(p.photos||[]).map(s=>`<div class="thumb" onclick="openLb('${s}')"><img src="${s}" alt=""></div>`).join('')}</div>`:'';
+  const ph=(p.photos||[]).length?`<div class="thumb-row">${(p.photos||[]).map(s=>`<div class="thumb" onclick="openLb('${s}')"><img src="${optim(s,400)}" alt=""></div>`).join('')}</div>`:'';
   const cm=(p.compatible||[]).length?`<div style="margin-bottom:14px"><div class="sec-lbl" style="margin-bottom:8px">Compatible avec</div><div>${(p.compatible||[]).map(m=>`<span class="ctag">${m}</span>`).join('')}</div></div>`:'';
   document.getElementById('detail-body').innerHTML=`${ph}
     <div style="margin-bottom:4px">
@@ -845,9 +863,25 @@ function selCond(v) {
   document.querySelector(`.cond-btn[data-v="${v}"]`).classList.add(map[v]);
 }
 function trigPhoto(i) { document.getElementById('pi'+i).click(); }
-function onPhoto(i,inp) {
+async function onPhoto(i,inp) {
   const f=inp.files[0]; if (!f) return;
-  const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'), MAX=500; let w=img.width,h=img.height; if(w>h){if(w>MAX){h=h*MAX/w;w=MAX;}}else{if(h>MAX){w=w*MAX/h;h=MAX;}} c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h); const d=c.toDataURL('image/jpeg',.65); photos[i]=d; const s=document.getElementById('ps'+i); s.innerHTML=`<img src="${d}" alt="" style="cursor:pointer" onclick="openLb('${d}')"><div class="photo-del" onclick="rmPhoto(${i},event)">✕</div><input type="file" id="pi${i}" accept="image/*" style="display:none" onchange="onPhoto(${i},this)">`; }; img.src=e.target.result; }; r.readAsDataURL(f);
+  const s=document.getElementById('ps'+i);
+  // 1) Redimensionne en aperçu local
+  const d = await new Promise((resolve)=>{
+    const r=new FileReader();
+    r.onload=e=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'), MAX=1000; let w=img.width,h=img.height; if(w>h){if(w>MAX){h=h*MAX/w;w=MAX;}}else{if(h>MAX){w=w*MAX/h;h=MAX;}} c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h); resolve(c.toDataURL('image/jpeg',.8)); }; img.src=e.target.result; };
+    r.readAsDataURL(f);
+  });
+  // Aperçu immédiat (légèrement grisé pendant l'envoi)
+  s.innerHTML=`<img src="${d}" alt="" style="opacity:.5"><div class="photo-del" onclick="rmPhoto(${i},event)">✕</div>`;
+  // 2) Upload Cloudinary → on ne garde QUE l'URL
+  try {
+    const url = await uploadCloudinary(d);
+    photos[i]=url;
+    s.innerHTML=`<img src="${optim(url,500)}" alt="" style="cursor:pointer" onclick="openLb('${url}')"><div class="photo-del" onclick="rmPhoto(${i},event)">✕</div><input type="file" id="pi${i}" accept="image/*" style="display:none" onchange="onPhoto(${i},this)">`;
+  } catch(err) {
+    photos[i]=null; resetSlot(i); toast("⚠️ Échec de l'envoi de la photo, réessaie"); console.error(err);
+  }
 }
 function rmPhoto(i,e) { e.stopPropagation(); photos[i]=null; resetSlot(i); }
 function onBMChange() {
