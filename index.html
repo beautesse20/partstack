@@ -375,8 +375,8 @@
     .empty-ttl { font-size:18px; font-weight:700; color:var(--text2); margin-bottom:8px; }
     .empty-dsc { font-size:14px; color:var(--text3); line-height:1.6; }
 
-    /* Desktop frame */
-    @media (hover:hover) and (pointer:fine) {
+    /* Desktop frame — uniquement sur grand écran, jamais sur téléphone (plein écran garanti) */
+    @media (hover:hover) and (pointer:fine) and (min-width:768px) {
       body { background:#D8D7D3; display:flex; align-items:center; justify-content:center; min-height:100dvh; }
       #app { max-width:420px; width:100%; height:min(860px,96dvh); border-radius:40px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.2); }
       #screen-setup { border-radius:40px; }
@@ -708,7 +708,13 @@ function filterBrand(b, el) {
 function renderList() {
   let parts = [...allParts];
   if (brandFilter!=='all') parts=parts.filter(p=>p.brand===brandFilter);
-  if (searchQ) { const q=searchQ.toLowerCase(); parts=parts.filter(p=>[p.model,p.brand,p.type,p.ref,p.notes].some(f=>(f||'').toLowerCase().includes(q))); }
+  if (searchQ) {
+    const q=searchQ.toLowerCase(), qc=q.replace(/[^a-z0-9]/g,'');   // version sans séparateurs → "IP12ECR" trouve "IP12-ECR"
+    parts=parts.filter(p=>[p.model,p.brand,p.type,p.ref,p.notes].some(f=>{
+      const t=(f||'').toLowerCase();
+      return t.includes(q) || (qc.length>=2 && t.replace(/[^a-z0-9]/g,'').includes(qc));
+    }));
+  }
 
   const lbl = document.getElementById('list-lbl');
   lbl.textContent = brandFilter==='all' ? 'Toutes les pièces' : parts.length+' pièce'+(parts.length!==1?'s':'')+' · '+brandFilter;
@@ -941,7 +947,8 @@ function smartSearch() {
   const tokens=query.split(/\s+/).filter(t=>t.length>1);
   const scored=allParts.map(p=>{
     let s=0; const txt=[p.brand,p.model,p.type,p.notes,p.ref,...(p.compatible||[])].map(x=>(x||'').toLowerCase()).join(' ');
-    tokens.forEach(tk=>{ if(!txt.includes(tk))return; s+=2; if((p.model||'').toLowerCase().includes(tk))s+=4; if((p.type||'').toLowerCase().includes(tk))s+=3; if((p.brand||'').toLowerCase().includes(tk))s+=2; if((p.compatible||[]).some(c=>c.toLowerCase().includes(tk)))s+=1; });
+    const txtC=txt.replace(/[^a-z0-9]/g,'');   // recherche de réf sans séparateurs
+    tokens.forEach(tk=>{ const tkc=tk.replace(/[^a-z0-9]/g,''); if(!txt.includes(tk) && !(tkc.length>=2 && txtC.includes(tkc)))return; s+=2; if((p.model||'').toLowerCase().includes(tk))s+=4; if((p.type||'').toLowerCase().includes(tk))s+=3; if((p.brand||'').toLowerCase().includes(tk))s+=2; if((p.compatible||[]).some(c=>c.toLowerCase().includes(tk)))s+=1; });
     if(p.condition==='ok')s+=.5; return {p,s};
   }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
   if (!scored.length) { out.innerHTML='<div class="empty"><div class="empty-ico">🤔</div><div class="empty-ttl">Aucun résultat</div><div class="empty-dsc">Essaie d\'autres termes.</div></div>'; return; }
