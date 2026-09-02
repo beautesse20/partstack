@@ -733,12 +733,50 @@ function filterInv(v) { searchQ=v; renderList(); }
 // ═══════════════════════════════════════════════════════
 // DETAIL
 // ═══════════════════════════════════════════════════════
+// ── Historique / Réparations (journal interne par pièce) ──
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtHD(iso){try{return new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return iso||'';}}
+async function addHisto(){
+  const ta=document.getElementById('histo-input'); if(!ta) return;
+  const texte=(ta.value||'').trim(); if(!texte) return;
+  const p=allParts.find(x=>x.id===curPartId); if(!p) return;
+  const liste=[...(p.historique||[]),{date:new Date().toISOString(),texte}];
+  try{
+    await db.collection('parts').doc(curPartId).update({historique:liste});
+    p.historique=liste;                 // maj locale immédiate (avant le snapshot)
+    showDetail(curPartId,prevScreen);
+    toast('✅ Ajouté au journal');
+  }catch(e){ toast('Erreur, réessaie'); }
+}
+async function delHisto(idx){
+  const p=allParts.find(x=>x.id===curPartId); if(!p) return;
+  const liste=(p.historique||[]).filter((_,i)=>i!==idx);
+  try{
+    await db.collection('parts').doc(curPartId).update({historique:liste});
+    p.historique=liste;
+    showDetail(curPartId,prevScreen);
+  }catch(e){ toast('Erreur, réessaie'); }
+}
+
 function showDetail(id,from) {
   prevScreen=from||'inventory'; curPartId=id;
   const p=allParts.find(x=>x.id===id); if (!p) return;
   document.getElementById('detail-hdr').textContent=p.ref||'Détail';
   const ph=(p.photos||[]).length?`<div class="thumb-row">${(p.photos||[]).map(s=>`<div class="thumb" onclick="openLb('${s}')"><img src="${optim(s,400)}" alt=""></div>`).join('')}</div>`:'';
   const cm=(p.compatible||[]).length?`<div style="margin-bottom:14px"><div class="sec-lbl" style="margin-bottom:8px">Compatible avec</div><div>${(p.compatible||[]).map(m=>`<span class="ctag">${m}</span>`).join('')}</div></div>`:'';
+  // Journal Historique / Réparations (interne) — plus récent en haut.
+  const hist=(p.historique||[]).map((h,i)=>({...h,_i:i})).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const histRows=hist.length?hist.map(h=>`<div class="info-row" style="align-items:flex-start;gap:10px">
+        <div style="flex:1;text-align:left;min-width:0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">🕗 ${fmtHD(h.date)}${h.auteur?' · '+esc(h.auteur):''}</div>
+          <div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(h.texte)}</div>
+        </div>
+        <button onclick="delHisto(${h._i})" title="Supprimer" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;padding:0 2px">✕</button>
+      </div>`).join(''):`<div class="info-row"><span style="font-size:13px;color:var(--text3)">Aucune réparation notée. Ajoute la première ci-dessous.</span></div>`;
+  const histoSection=`<div class="sec-lbl" style="margin:20px 0 8px">🔧 Historique / Réparations</div>
+    <div class="info-block">${histRows}</div>
+    <textarea id="histo-input" rows="2" placeholder="Ex : Testée OK, reconditionnée / défaut connecteur…" style="width:100%;box-sizing:border-box;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-md);padding:11px 13px;color:var(--text);font-family:inherit;font-size:14px;resize:vertical"></textarea>
+    <button onclick="addHisto()" style="width:100%;margin-top:8px;padding:13px;border:0.5px solid var(--border);border-radius:var(--r-lg);background:var(--acc-lt);color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">➕ Ajouter au journal</button>`;
   document.getElementById('detail-body').innerHTML=`${ph}
     <div style="margin-bottom:4px">
       <div class="detail-ref">${p.ref||''}</div>
@@ -755,6 +793,7 @@ function showDetail(id,from) {
       <div class="info-row"><span class="info-lbl">Référence</span><span class="info-val" style="font-family:monospace">${p.ref||''}</span></div>
     </div>
     ${cm}
+    ${histoSection}
     <button class="btn-del" onclick="deletePart('${p.id}')">🗑 Supprimer cette pièce</button>`;
   go('detail');
 }
