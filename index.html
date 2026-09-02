@@ -155,6 +155,14 @@
 
     /* ── PART LIST ── */
     .list-wrap { padding:14px 18px 24px; }
+    .type-wrap { padding:10px 18px 2px; flex-shrink:0; }
+    .tchip-row { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; scrollbar-width:none; }
+    .tchip-row::-webkit-scrollbar { display:none; }
+    .tchip { display:flex; align-items:center; gap:6px; flex-shrink:0; padding:8px 13px; background:var(--card); border:0.5px solid var(--border); border-radius:50px; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; transition:transform .1s; white-space:nowrap; }
+    .tchip:active { transform:scale(0.96); }
+    .tchip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .tchip-cnt { font-size:11px; color:var(--text3); }
+    .tchip.on .tchip-cnt { color:rgba(255,255,255,.5); }
 
     .pcard {
       background:var(--card); border-radius:var(--r-xl);
@@ -407,6 +415,10 @@
         <div class="sec-lbl">Filtrer par marque</div>
         <div class="brand-grid" id="brand-grid"></div>
       </div>
+      <div class="type-wrap">
+        <div class="sec-lbl">Filtrer par type</div>
+        <div class="tchip-row" id="type-row"></div>
+      </div>
       <div class="list-wrap">
         <div class="sec-lbl" id="list-lbl">Toutes les pièces</div>
         <div id="parts-list"></div>
@@ -556,13 +568,14 @@
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let db = null, allParts = [], brandFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
+let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
 
 const BRANDS   = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Autre'];
 const BRAND_IC = { Apple:'🍎', Samsung:'🔷', Xiaomi:'📱', Huawei:'🌸', OnePlus:'🔴', Google:'🌐', Autre:'📦' };
 const BRAND_CD = { Apple:'A', Samsung:'SA', Xiaomi:'XI', Huawei:'HU', OnePlus:'OP', Google:'GO', Autre:'AU' };
 const TYPE_CD  = { 'Batterie':'BAT','Écran':'ECR','Chassis':'CHA','Caméra':'CAM','Connecteur charge':'CON','Haut-parleur':'HAP','Micro':'MIC','Vibreur':'VIB','Bouton':'BUT','Nappe':'NAP','Autre':'AUT' };
 const TYPE_IC  = { 'Batterie':'🔋','Écran':'📱','Chassis':'📱','Caméra':'📷','Connecteur charge':'🔌','Haut-parleur':'🔊','Micro':'🎙️','Vibreur':'📳','Bouton':'⚙️','Nappe':'🔗','Autre':'🔧' };
+const TYPES    = Object.keys(TYPE_IC);
 const COMPAT   = {
   Apple: { 'iPhone 12':['iPhone 12 Mini','iPhone 12 Pro'], 'iPhone 12 Pro':['iPhone 12','iPhone 12 Pro Max'], 'iPhone 13':['iPhone 13 Mini','iPhone 13 Pro'], 'iPhone 13 Pro':['iPhone 13','iPhone 13 Pro Max'], 'iPhone 14':['iPhone 14 Plus'], 'iPhone 14 Pro':['iPhone 14 Pro Max'], 'iPhone 11':['iPhone 11 Pro'], 'iPhone X':['iPhone XS'], 'iPhone XS':['iPhone X','iPhone XS Max'] },
   Samsung: { 'Galaxy S21':['Galaxy S21+','Galaxy S21 FE'], 'Galaxy S22':['Galaxy S22+','Galaxy S22 Ultra'], 'Galaxy S23':['Galaxy S23+','Galaxy S23 FE'], 'Galaxy A52':['Galaxy A52s','Galaxy A52 5G'], 'Galaxy Note 20':['Galaxy Note 20 Ultra'] }
@@ -635,7 +648,7 @@ function subscribe() {
   if (!db) return;
   db.collection('parts').orderBy('createdAt','desc').onSnapshot(snap => {
     allParts = snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderBrands(); renderList(); updateCount();
+    renderBrands(); renderTypes(); renderList(); updateCount();
   }, e=>{ console.error(e); toast('Erreur de sync'); });
 }
 
@@ -702,12 +715,36 @@ function filterBrand(b, el) {
   renderList();
 }
 
+function renderTypes() {
+  const row = document.getElementById('type-row');
+  if (!row) return;
+  // seulement les types présents en stock (+ « Tous »), avec compteur
+  const present = TYPES.filter(t=>allParts.some(p=>p.type===t));
+  const items = ['all', ...present];
+  row.innerHTML = items.map(t=>{
+    const isAll = t==='all';
+    const ic  = isAll ? '📦' : (TYPE_IC[t]||'🔧');
+    const name= isAll ? 'Tous' : t;
+    const cnt = isAll ? allParts.length : allParts.filter(p=>p.type===t).length;
+    const cls = `tchip${typeFilter===t?' on':''}`;
+    return `<div class="${cls}" onclick="filterType('${t.replace(/'/g,"\\'")}',this)"><span>${ic}</span><span>${name}</span><span class="tchip-cnt">${cnt}</span></div>`;
+  }).join('');
+}
+
+function filterType(t, el) {
+  typeFilter = t;
+  document.querySelectorAll('.tchip').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+}
+
 // ═══════════════════════════════════════════════════════
 // INVENTORY LIST
 // ═══════════════════════════════════════════════════════
 function renderList() {
   let parts = [...allParts];
   if (brandFilter!=='all') parts=parts.filter(p=>p.brand===brandFilter);
+  if (typeFilter!=='all')  parts=parts.filter(p=>p.type===typeFilter);
   if (searchQ) {
     const q=searchQ.toLowerCase(), qc=q.replace(/[^a-z0-9]/g,'');   // version sans séparateurs → "IP12ECR" trouve "IP12-ECR"
     parts=parts.filter(p=>[p.model,p.brand,p.type,p.ref,p.notes].some(f=>{
@@ -717,7 +754,8 @@ function renderList() {
   }
 
   const lbl = document.getElementById('list-lbl');
-  lbl.textContent = brandFilter==='all' ? 'Toutes les pièces' : parts.length+' pièce'+(parts.length!==1?'s':'')+' · '+brandFilter;
+  const bits = []; if (brandFilter!=='all') bits.push(brandFilter); if (typeFilter!=='all') bits.push(typeFilter);
+  lbl.textContent = bits.length ? parts.length+' pièce'+(parts.length!==1?'s':'')+' · '+bits.join(' · ') : 'Toutes les pièces';
 
   const el = document.getElementById('parts-list');
   if (!parts.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><div class="empty-ttl">${allParts.length?'Aucun résultat':'Inventaire vide'}</div><div class="empty-dsc">${allParts.length?'Essaie un autre filtre.':'Appuie sur + pour ajouter ta première pièce.'}</div></div>`; return; }
