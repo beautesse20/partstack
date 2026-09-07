@@ -653,6 +653,7 @@ function startApp(cfg) {
     document.getElementById('nav').style.display='flex';
     go('inventory');
     subscribe();
+    loadInventorySession();   // session d'inventaire durable (Firebase, pas juste localStorage)
   } catch(e) { toast('⚠️ Erreur de connexion Firebase'); console.error(e); }
 }
 
@@ -845,7 +846,7 @@ function togglePointage() {
   pointageMode = !pointageMode;
   const btn = document.getElementById('pointage-toggle');
   if (pointageMode) {
-    if (!sessionStart) { sessionStart = new Date().toISOString(); try{ localStorage.setItem('ps_inv_session', sessionStart); }catch(e){} }
+    if (!sessionStart) { sessionStart = new Date().toISOString(); persistSession(sessionStart); }
     btn.textContent = "✓ Terminer l'inventaire"; btn.classList.add('on');
   } else {
     btn.textContent = "📋 Faire l'inventaire"; btn.classList.remove('on'); hidePointed = false;
@@ -905,10 +906,29 @@ async function deleteAbsents() {
 function resetInventory() {
   if (!confirm('Démarrer un nouvel inventaire ? Le pointage en cours repart à zéro. (Les dates de vérification déjà enregistrées sur les pièces sont conservées.)')) return;
   sessionStart = new Date().toISOString();
-  try { localStorage.setItem('ps_inv_session', sessionStart); }catch(e){}
+  persistSession(sessionStart);
   hidePointed = false;
   renderList();
   toast('🔄 Nouvel inventaire démarré');
+}
+
+// Session d'inventaire durable : Firebase = source de vérité, localStorage = cache rapide.
+function persistSession(ts) {
+  try { localStorage.setItem('ps_inv_session', ts); } catch(e) {}
+  try { db && db.collection('meta').doc('inventaire').set({ sessionStart: ts }, { merge:true }); } catch(e) {}
+}
+async function loadInventorySession() {
+  try {
+    const d = await db.collection('meta').doc('inventaire').get();
+    const ts = d.exists && d.data().sessionStart;
+    if (ts) {                                   // Firebase fait foi (survit à un vidage du cache / autre appareil)
+      sessionStart = ts;
+      try { localStorage.setItem('ps_inv_session', ts); } catch(e) {}
+      if (pointageMode) renderList();
+    } else if (sessionStart) {                  // rien côté serveur mais on a un cache local → on le remonte
+      persistSession(sessionStart);
+    }
+  } catch(e) { /* règles Firestore restrictives → on garde le fallback localStorage */ }
 }
 
 function updateCount() { const n=allParts.length; document.getElementById('count-lbl').textContent=n+' pièce'+(n!==1?'s':''); }
