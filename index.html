@@ -383,6 +383,30 @@
     .empty-ttl { font-size:18px; font-weight:700; color:var(--text2); margin-bottom:8px; }
     .empty-dsc { font-size:14px; color:var(--text3); line-height:1.6; }
 
+    /* ── MODE INVENTAIRE (pointage) ── */
+    .point-toggle { width:100%; margin-top:12px; padding:12px; border-radius:var(--r-md); border:0.5px solid var(--border); background:var(--card); color:var(--accent); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s,color .15s; }
+    .point-toggle.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+    #pointage-bar { padding:14px 18px 2px; flex-shrink:0; }
+    .pbar-card { background:var(--accent); color:#fff; border-radius:var(--r-lg); padding:14px 16px; }
+    .pbar-stats { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:11px; gap:12px; }
+    .pbar-big { font-size:23px; font-weight:700; line-height:1.1; }
+    .pbar-lbl { font-size:12px; opacity:.65; margin-top:2px; }
+    .pbar-side { text-align:right; font-size:12px; line-height:1.55; flex-shrink:0; }
+    .pbar-prog { height:8px; background:rgba(255,255,255,.18); border-radius:50px; overflow:hidden; margin-bottom:11px; }
+    .pbar-prog > div { height:100%; background:#fff; transition:width .3s ease; }
+    .pbar-actions { display:flex; gap:8px; }
+    .pbar-btn { flex:1; padding:9px 6px; border-radius:var(--r-sm); border:none; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+    .pbar-neutral { background:rgba(255,255,255,.15); color:#fff; }
+    .pbar-del { background:var(--hs-tx); color:#fff; }
+    .point-actions { display:flex; gap:6px; flex-shrink:0; }
+    .pt-btn { width:44px; height:44px; border-radius:var(--r-md); border:0.5px solid var(--border); background:var(--card); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s,transform .1s; }
+    .pt-btn:active { transform:scale(0.9); }
+    .pt-yes.on { background:var(--ok-bg); border-color:var(--ok-bd); }
+    .pt-no.on  { background:var(--hs-bg); border-color:var(--hs-bd); }
+    .pcard.is-present { border-color:var(--ok-bd); }
+    .pcard.is-absent  { border-color:var(--hs-bd); opacity:.55; }
+    .pcard-seen { font-size:10px; color:var(--text3); margin-top:3px; }
+
     /* Desktop frame — uniquement sur grand écran, jamais sur téléphone (plein écran garanti) */
     @media (hover:hover) and (pointer:fine) and (min-width:768px) {
       body { background:#D8D7D3; display:flex; align-items:center; justify-content:center; min-height:100dvh; }
@@ -408,9 +432,11 @@
         <span style="font-size:16px;color:var(--text3)">🔍</span>
         <input type="search" id="inv-q" placeholder="Chercher une pièce…" oninput="filterInv(this.value)" autocomplete="off">
       </div>
+      <button id="pointage-toggle" class="point-toggle" onclick="togglePointage()">📋 Faire l'inventaire</button>
     </div>
 
     <div class="scroll">
+      <div id="pointage-bar" style="display:none"></div>
       <div class="brand-wrap">
         <div class="sec-lbl">Filtrer par marque</div>
         <div class="brand-grid" id="brand-grid"></div>
@@ -569,6 +595,10 @@
 // STATE
 // ═══════════════════════════════════════════════════════
 let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
+// Mode inventaire (pointage physique) : sessionStart = début de la session en cours.
+// Une pièce est « pointée cette session » si son pointeLe >= sessionStart.
+let pointageMode = false, hidePointed = false, sessionStart = null;
+try { sessionStart = localStorage.getItem('ps_inv_session') || null; } catch(e) {}
 
 const BRANDS   = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Autre'];
 const BRAND_IC = { Apple:'🍎', Samsung:'🔷', Xiaomi:'📱', Huawei:'🌸', OnePlus:'🔴', Google:'🌐', Autre:'📦' };
@@ -741,7 +771,8 @@ function filterType(t, el) {
 // ═══════════════════════════════════════════════════════
 // INVENTORY LIST
 // ═══════════════════════════════════════════════════════
-function renderList() {
+// Applique les filtres actifs (marque + type + recherche sans séparateurs).
+function filteredParts() {
   let parts = [...allParts];
   if (brandFilter!=='all') parts=parts.filter(p=>p.brand===brandFilter);
   if (typeFilter!=='all')  parts=parts.filter(p=>p.type===typeFilter);
@@ -752,23 +783,132 @@ function renderList() {
       return t.includes(q) || (qc.length>=2 && t.replace(/[^a-z0-9]/g,'').includes(qc));
     }));
   }
+  return parts;
+}
+// Pièce pointée durant la session d'inventaire en cours ?
+function isPointed(p) { return !!(sessionStart && p.pointeLe && p.pointeLe >= sessionStart); }
+function fmtDay(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ''; } }
 
+function cardNormal(p) {
+  return `<div class="pcard" onclick="showDetail('${p.id}','inventory')">
+      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
+      <div class="pcard-info">
+        <div class="pcard-ref">${esc(p.ref||'')}</div>
+        <div class="pcard-name">${esc(p.type)} — ${esc(p.model)}</div>
+        <div class="pcard-sub">${esc(p.brand)}${p.notes?' · '+esc(p.notes.slice(0,42))+(p.notes.length>42?'…':''):''}</div>
+      </div>
+      <span class="badge ${bCls(p.condition)}">${bLbl(p.condition)}</span>
+    </div>`;
+}
+function cardPointage(p) {
+  const pointed = isPointed(p);
+  const cls = `pcard${pointed&&p.present===true?' is-present':''}${pointed&&p.present===false?' is-absent':''}`;
+  const seen = p.verifieLe ? `<div class="pcard-seen">✔︎ vérifiée ${fmtDay(p.verifieLe)}</div>` : `<div class="pcard-seen">jamais vérifiée</div>`;
+  return `<div class="${cls}">
+      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
+      <div class="pcard-info" onclick="showDetail('${p.id}','inventory')">
+        <div class="pcard-ref">${esc(p.ref||'')}</div>
+        <div class="pcard-name">${esc(p.type)} — ${esc(p.model)}</div>
+        <div class="pcard-sub">${esc(p.brand)}</div>
+        ${seen}
+      </div>
+      <div class="point-actions">
+        <button class="pt-btn pt-yes${pointed&&p.present===true?' on':''}" onclick="markPart('${p.id}',true)">✅</button>
+        <button class="pt-btn pt-no${pointed&&p.present===false?' on':''}" onclick="markPart('${p.id}',false)">❌</button>
+      </div>
+    </div>`;
+}
+
+function renderList() {
+  const parts = filteredParts();
   const lbl = document.getElementById('list-lbl');
   const bits = []; if (brandFilter!=='all') bits.push(brandFilter); if (typeFilter!=='all') bits.push(typeFilter);
   lbl.textContent = bits.length ? parts.length+' pièce'+(parts.length!==1?'s':'')+' · '+bits.join(' · ') : 'Toutes les pièces';
 
+  renderPointageBar(parts);
+  let list = parts;
+  if (pointageMode && hidePointed) list = parts.filter(p=>!isPointed(p));
+
   const el = document.getElementById('parts-list');
-  if (!parts.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><div class="empty-ttl">${allParts.length?'Aucun résultat':'Inventaire vide'}</div><div class="empty-dsc">${allParts.length?'Essaie un autre filtre.':'Appuie sur + pour ajouter ta première pièce.'}</div></div>`; return; }
-  el.innerHTML = parts.map(p=>`
-    <div class="pcard" onclick="showDetail('${p.id}','inventory')">
-      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
-      <div class="pcard-info">
-        <div class="pcard-ref">${p.ref||''}</div>
-        <div class="pcard-name">${p.type} — ${p.model}</div>
-        <div class="pcard-sub">${p.brand}${p.notes?' · '+p.notes.slice(0,42)+(p.notes.length>42?'…':''):''}</div>
-      </div>
-      <span class="badge ${bCls(p.condition)}">${bLbl(p.condition)}</span>
-    </div>`).join('');
+  if (!list.length) {
+    const allDone = pointageMode && hidePointed && allParts.length;
+    el.innerHTML=`<div class="empty"><div class="empty-ico">${allDone?'✅':'📦'}</div><div class="empty-ttl">${allParts.length?(allDone?'Tout est pointé !':'Aucun résultat'):'Inventaire vide'}</div><div class="empty-dsc">${allParts.length?(allDone?'Toutes les pièces de cette vue ont été vérifiées.':'Essaie un autre filtre.'):'Appuie sur + pour ajouter ta première pièce.'}</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(p=> pointageMode ? cardPointage(p) : cardNormal(p)).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// MODE INVENTAIRE (pointage physique)
+// ═══════════════════════════════════════════════════════
+function togglePointage() {
+  pointageMode = !pointageMode;
+  const btn = document.getElementById('pointage-toggle');
+  if (pointageMode) {
+    if (!sessionStart) { sessionStart = new Date().toISOString(); try{ localStorage.setItem('ps_inv_session', sessionStart); }catch(e){} }
+    btn.textContent = "✓ Terminer l'inventaire"; btn.classList.add('on');
+  } else {
+    btn.textContent = "📋 Faire l'inventaire"; btn.classList.remove('on'); hidePointed = false;
+  }
+  renderList();
+}
+function toggleHidePointed() { hidePointed = !hidePointed; renderList(); }
+
+function renderPointageBar(parts) {
+  const bar = document.getElementById('pointage-bar');
+  if (!bar) return;
+  if (!pointageMode) { bar.style.display='none'; return; }
+  bar.style.display='block';
+  const pointed = parts.filter(isPointed);
+  const pres = pointed.filter(p=>p.present===true).length;
+  const abs  = pointed.filter(p=>p.present===false).length;
+  const total = parts.length, done = pointed.length, reste = total - done;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const filtre = (brandFilter!=='all'||typeFilter!=='all'||searchQ) ? ' (vue filtrée)' : '';
+  bar.innerHTML = `<div class="pbar-card">
+    <div class="pbar-stats">
+      <div><div class="pbar-big">${done} / ${total}</div><div class="pbar-lbl">pointées${filtre}</div></div>
+      <div class="pbar-side"><div>✅ ${pres} présente${pres>1?'s':''}</div><div>❌ ${abs} absente${abs>1?'s':''}</div><div style="opacity:.65">reste ${reste}</div></div>
+    </div>
+    <div class="pbar-prog"><div style="width:${pct}%"></div></div>
+    <div class="pbar-actions">
+      <button class="pbar-btn pbar-neutral" onclick="toggleHidePointed()">${hidePointed?'👁 Tout voir':'🙈 Masquer pointées'}</button>
+      ${abs?`<button class="pbar-btn pbar-del" onclick="deleteAbsents()">🗑 Suppr. ${abs} absente${abs>1?'s':''}</button>`:''}
+      <button class="pbar-btn pbar-neutral" onclick="resetInventory()">🔄 Nouveau</button>
+    </div>
+  </div>`;
+}
+
+async function markPart(id, present) {
+  const p = allParts.find(x=>x.id===id); if (!p) return;
+  const now = new Date().toISOString();
+  const data = { present, pointeLe: now };
+  if (present) data.verifieLe = now;            // « présente » = vérifiée maintenant
+  Object.assign(p, data);                        // maj optimiste (avant le snapshot)
+  renderList();
+  try { await db.collection('parts').doc(id).update(data); }
+  catch(e) { toast('Erreur, réessaie'); console.error(e); }
+}
+
+async function deleteAbsents() {
+  const absents = filteredParts().filter(p=>isPointed(p) && p.present===false);
+  if (!absents.length) { toast('Aucune absente à supprimer'); return; }
+  if (!confirm(`Supprimer définitivement ${absents.length} pièce(s) marquée(s) absente(s) ?`)) return;
+  try {
+    const batch = db.batch();
+    absents.forEach(p=>batch.delete(db.collection('parts').doc(p.id)));
+    await batch.commit();
+    toast(`✅ ${absents.length} pièce(s) supprimée(s)`);
+  } catch(e) { toast('Erreur suppression'); console.error(e); }
+}
+
+function resetInventory() {
+  if (!confirm('Démarrer un nouvel inventaire ? Le pointage en cours repart à zéro. (Les dates de vérification déjà enregistrées sur les pièces sont conservées.)')) return;
+  sessionStart = new Date().toISOString();
+  try { localStorage.setItem('ps_inv_session', sessionStart); }catch(e){}
+  hidePointed = false;
+  renderList();
+  toast('🔄 Nouvel inventaire démarré');
 }
 
 function updateCount() { const n=allParts.length; document.getElementById('count-lbl').textContent=n+' pièce'+(n!==1?'s':''); }
@@ -835,6 +975,7 @@ function showDetail(id,from) {
       <div class="info-row"><span class="info-lbl">État</span><span class="info-val"><span class="badge ${bCls(p.condition)}">${bLbl(p.condition)}</span></span></div>
       ${p.notes?`<div class="info-row"><span class="info-lbl">Notes</span><span class="info-val">${p.notes}</span></div>`:''}
       <div class="info-row"><span class="info-lbl">Référence</span><span class="info-val" style="font-family:monospace">${p.ref||''}</span></div>
+      <div class="info-row"><span class="info-lbl">Dernière vérif.</span><span class="info-val" style="${p.verifieLe?'':'color:var(--text3)'}">${p.verifieLe?fmtHD(p.verifieLe):'Jamais'}</span></div>
     </div>
     ${cm}
     ${histoSection}
