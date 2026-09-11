@@ -598,7 +598,9 @@ let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ =
 // Mode inventaire (pointage physique) : sessionStart = début de la session en cours.
 // Une pièce est « pointée cette session » si son pointeLe >= sessionStart.
 let pointageMode = false, hidePointed = false, sessionStart = null;
-try { sessionStart = localStorage.getItem('ps_inv_session') || null; } catch(e) {}
+// sessionStart vient UNIQUEMENT de Firebase (meta/inventaire), chargé au démarrage.
+// null = on voit TOUT le pointage existant → jamais de remise à zéro accidentelle.
+// Seul le bouton « Nouveau » démarre une session (fixe sessionStart = maintenant).
 
 const BRANDS   = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Autre'];
 const BRAND_IC = { Apple:'🍎', Samsung:'🔷', Xiaomi:'📱', Huawei:'🌸', OnePlus:'🔴', Google:'🌐', Autre:'📦' };
@@ -787,7 +789,7 @@ function filteredParts() {
   return parts;
 }
 // Pièce pointée durant la session d'inventaire en cours ?
-function isPointed(p) { return !!(sessionStart && p.pointeLe && p.pointeLe >= sessionStart); }
+function isPointed(p) { return !!(p.pointeLe && (!sessionStart || p.pointeLe >= sessionStart)); }
 function fmtDay(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ''; } }
 
 function cardNormal(p) {
@@ -846,8 +848,7 @@ function togglePointage() {
   pointageMode = !pointageMode;
   const btn = document.getElementById('pointage-toggle');
   if (pointageMode) {
-    if (!sessionStart) { sessionStart = new Date().toISOString(); persistSession(sessionStart); }
-    btn.textContent = "✓ Terminer l'inventaire"; btn.classList.add('on');
+    btn.textContent = "✓ Terminer l'inventaire"; btn.classList.add('on');   // n'ouvre PAS de session : le pointage existant reste visible
   } else {
     btn.textContent = "📋 Faire l'inventaire"; btn.classList.remove('on'); hidePointed = false;
   }
@@ -914,21 +915,15 @@ function resetInventory() {
 
 // Session d'inventaire durable : Firebase = source de vérité, localStorage = cache rapide.
 function persistSession(ts) {
-  try { localStorage.setItem('ps_inv_session', ts); } catch(e) {}
-  try { db && db.collection('meta').doc('inventaire').set({ sessionStart: ts }, { merge:true }); } catch(e) {}
+  // Firebase = seule source de vérité (plus de localStorage → plus de reset accidentel).
+  try { if (ts === null) { db && db.collection('meta').doc('inventaire').delete(); } else { db && db.collection('meta').doc('inventaire').set({ sessionStart: ts }, { merge:true }); } } catch(e) {}
 }
 async function loadInventorySession() {
   try {
     const d = await db.collection('meta').doc('inventaire').get();
-    const ts = d.exists && d.data().sessionStart;
-    if (ts) {                                   // Firebase fait foi (survit à un vidage du cache / autre appareil)
-      sessionStart = ts;
-      try { localStorage.setItem('ps_inv_session', ts); } catch(e) {}
-      if (pointageMode) renderList();
-    } else if (sessionStart) {                  // rien côté serveur mais on a un cache local → on le remonte
-      persistSession(sessionStart);
-    }
-  } catch(e) { /* règles Firestore restrictives → on garde le fallback localStorage */ }
+    sessionStart = (d.exists && d.data().sessionStart) || null;   // rien = on voit tout le pointage
+    if (pointageMode) renderList();
+  } catch(e) { /* hors-ligne : sessionStart reste null → tout le pointage reste visible */ }
 }
 
 function updateCount() { const n=allParts.length; document.getElementById('count-lbl').textContent=n+' pièce'+(n!==1?'s':''); }
