@@ -511,7 +511,7 @@
         <div class="compat-wrap" id="compat-list"></div>
       </div>
       <div class="fgrp">
-        <label class="flbl">Photos (max 2)</label>
+        <label class="flbl" id="photo-lbl">Photos (max 2)</label>
         <div class="photo-row">
           <div class="photo-slot" id="ps0" onclick="trigPhoto(0)">
             <span style="font-size:28px;color:var(--text3)">📷</span>
@@ -600,6 +600,7 @@
 let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
 // Mode inventaire (pointage physique) : sessionStart = début de la session en cours.
 // Une pièce est « pointée cette session » si son pointeLe >= sessionStart.
+let editExtraPhotos = [];   // photos au-delà des 2 slots d'édition → préservées (ex. articles transformés depuis StockVault)
 let pointageMode = false, hidePointed = false, sessionStart = null;
 // sessionStart vient UNIQUEMENT de Firebase (meta/inventaire), chargé au démarrage.
 // null = on voit TOUT le pointage existant → jamais de remise à zéro accidentelle.
@@ -693,7 +694,8 @@ async function savePart() {
   if (!brand||!model||!type) { toast('⚠️ Marque, modèle et type requis'); return; }
   if (!curCond)               { toast("⚠️ Indique l'état"); return; }
   const compatible = Array.from(document.querySelectorAll('.ccheck.on')).map(e=>e.dataset.m);
-  const pData = { brand, model, type, condition:curCond, notes, compatible, photos:photos.filter(Boolean) };
+  // On préserve les photos au-delà des 2 slots (elles ne sont pas éditables mais ne doivent pas disparaître).
+  const pData = { brand, model, type, condition:curCond, notes, compatible, photos:photos.filter(Boolean).concat(editExtraPhotos||[]) };
   try {
     if (editPartId) {
       await db.collection('parts').doc(editPartId).update(pData);
@@ -1006,7 +1008,8 @@ function showDetail(id,from) {
 // ═══════════════════════════════════════════════════════
 function resetAdd() {
   ['a-model','a-notes','a-brand-other','a-type-other'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  curCond=null; curBrand=null; curType=null; editPartId=null; photos=[null,null];
+  curCond=null; curBrand=null; curType=null; editPartId=null; photos=[null,null]; editExtraPhotos=[];
+  { const pl=document.getElementById('photo-lbl'); if(pl) pl.textContent='Photos (max 2)'; }
   document.querySelectorAll('.cond-btn').forEach(b=>b.className='cond-btn');
   document.querySelectorAll('.brand-btn[data-brand]').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
@@ -1080,6 +1083,8 @@ function showEditForm(id) {
   // Photos
   photos = [null, null];
   (p.photos||[]).forEach((src,i)=>{ if(i>1)return; photos[i]=src; const s=document.getElementById('ps'+i); s.innerHTML=`<img src="${src}" alt="" style="cursor:pointer" onclick="openLb('${src}')"><div class="photo-del" onclick="rmPhoto(${i},event)">✕</div><input type="file" id="pi${i}" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(${i},this)">`; });
+  editExtraPhotos = (p.photos||[]).slice(2);   // photos 3+ conservées telles quelles
+  { const pl=document.getElementById('photo-lbl'); if(pl) pl.textContent = editExtraPhotos.length ? `Photos (2 modifiables · +${editExtraPhotos.length} conservée${editExtraPhotos.length>1?'s':''})` : 'Photos (max 2)'; }
   // Header + bouton
   const hdr=document.querySelector('#screen-add .hdr-title'); if(hdr) hdr.textContent='Modifier la pièce';
   const btn=document.getElementById('save-btn'); if(btn) btn.textContent='Enregistrer les modifications';
