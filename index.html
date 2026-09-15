@@ -708,10 +708,12 @@ async function savePart() {
   try {
     if (editPartId) {
       await db.collection('parts').doc(editPartId).update(pData);
+      logAudit('piece.modif', `${brand} ${model}`, type);
       toast('✅ Pièce modifiée'); editPartId=null; go('inventory');
     } else {
       const ref = genRef(brand,model,type);
       await db.collection('parts').add({ ref, ...pData, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+      logAudit('piece.ajout', ref, `${brand} ${model} · ${type}`);
       toast('✅ '+ref+' enregistrée'); go('inventory');
     }
   } catch(e) { toast("Erreur d'enregistrement"); console.error(e); }
@@ -719,8 +721,18 @@ async function savePart() {
 
 async function deletePart(id) {
   if (!confirm('Supprimer cette pièce ?')) return;
-  try { await db.collection('parts').doc(id).delete(); toast('Supprimée'); go('inventory'); }
+  const p = allParts.find(x=>x.id===id);
+  try { await db.collection('parts').doc(id).delete(); logAudit('piece.suppr', p?p.ref||p.model:id, p?`${p.brand} ${p.model}`:''); toast('Supprimée'); go('inventory'); }
   catch(e) { toast('Erreur'); }
+}
+
+// Journal d'audit central (hébergé par StockVault). Fire-and-forget.
+const AUDIT_URL = "https://stockvault-sable.vercel.app/api/audit";
+function auditUser() {
+  try { const p = new URLSearchParams(location.search).get('u'); if (p) { sessionStorage.setItem('bm_audit_user', p); return p; } return sessionStorage.getItem('bm_audit_user') || ''; } catch(e) { return ''; }
+}
+function logAudit(action, cible, details) {
+  try { fetch(AUDIT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true, body:JSON.stringify({ action, user:auditUser()||'—', app:'partstack', cible:cible||'', details:details||'' }) }).catch(()=>{}); } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -914,6 +926,7 @@ async function deleteAbsents() {
     const batch = db.batch();
     absents.forEach(p=>batch.delete(db.collection('parts').doc(p.id)));
     await batch.commit();
+    logAudit('inventaire.suppr_absentes', `${absents.length} pièce(s)`, '');
     toast(`✅ ${absents.length} pièce(s) supprimée(s)`);
   } catch(e) { toast('Erreur suppression'); console.error(e); }
 }
@@ -924,6 +937,7 @@ function resetInventory() {
   persistSession(sessionStart);
   hidePointed = false;
   renderList();
+  logAudit('inventaire.reset', '', 'nouvel inventaire démarré');
   toast('🔄 Nouvel inventaire démarré');
 }
 
