@@ -269,6 +269,12 @@
     .thumb { width:88px; height:88px; border-radius:var(--r-lg); overflow:hidden; cursor:pointer; }
     .thumb img { width:100%; height:100%; object-fit:cover; }
 
+    /* ── NAV PRÉC/SUIV dans la fiche pièce ── */
+    #detail-nav { display:none; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px calc(10px + var(--sab)); border-top:0.5px solid var(--border); background:var(--card); flex-shrink:0; }
+    .dnav-btn { border:none; background:var(--acc-lt); color:var(--accent); border-radius:10px; padding:9px 15px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .dnav-btn:disabled { background:transparent; color:var(--text3); cursor:default; }
+    .dnav-pos { font-size:12px; color:var(--text2); font-variant-numeric:tabular-nums; }
+
     .info-block {
       background:var(--card); border-radius:var(--r-xl);
       border:0.5px solid var(--border); overflow:hidden; margin:16px 0;
@@ -547,6 +553,7 @@
       <button class="back-btn" onclick="showEditForm(curPartId)" style="font-size:18px">✏️</button>
     </div>
     <div class="detail-scroll" id="detail-body"></div>
+    <div id="detail-nav"></div>
   </div>
 
   <!-- ══ RECHERCHE ════════════════════════════════════════ -->
@@ -610,6 +617,7 @@ photos = [null,null,null,null];
 // Mode inventaire (pointage physique) : sessionStart = début de la session en cours.
 // Une pièce est « pointée cette session » si son pointeLe >= sessionStart.
 let editExtraPhotos = [];   // photos au-delà des 2 slots d'édition → préservées (ex. articles transformés depuis StockVault)
+let navIds = [];            // ordre de la liste courante (pour Précédent/Suivant dans la fiche)
 let pointageMode = false, hidePointed = false, sessionStart = null;
 // sessionStart vient UNIQUEMENT de Firebase (meta/inventaire), chargé au démarrage.
 // null = on voit TOUT le pointage existant → jamais de remise à zéro accidentelle.
@@ -857,6 +865,7 @@ function renderList() {
   renderPointageBar(parts);
   let list = parts;
   if (pointageMode && hidePointed) list = parts.filter(p=>!isPointed(p));
+  navIds = list.map(p=>p.id);   // ordre pour Précédent/Suivant
 
   const el = document.getElementById('parts-list');
   if (!list.length) {
@@ -1023,7 +1032,23 @@ function showDetail(id,from) {
     ${cm}
     ${histoSection}
     <button class="btn-del" onclick="deletePart('${p.id}')">🗑 Supprimer cette pièce</button>`;
+  renderDetailNav();
   go('detail');
+}
+
+// Barre Précédent/Suivant : suit la liste affichée (inventaire filtré ou recherche).
+function renderDetailNav() {
+  const bar = document.getElementById('detail-nav');
+  if (!bar) return;
+  const i = navIds.indexOf(curPartId);
+  if (i < 0 || navIds.length < 2) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const prev = i > 0 ? navIds[i-1] : null;
+  const next = i < navIds.length - 1 ? navIds[i+1] : null;
+  bar.innerHTML =
+    `<button class="dnav-btn" ${prev?'':'disabled'} ${prev?`onclick="showDetail('${prev}',prevScreen)"`:''}>‹ Précédent</button>`+
+    `<span class="dnav-pos">${i+1} / ${navIds.length}</span>`+
+    `<button class="dnav-btn" ${next?'':'disabled'} ${next?`onclick="showDetail('${next}',prevScreen)"`:''}>Suivant ›</button>`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1176,6 +1201,7 @@ function smartSearch() {
     tokens.forEach(tk=>{ const tkc=tk.replace(/[^a-z0-9]/g,''); if(!txt.includes(tk) && !(tkc.length>=2 && txtC.includes(tkc)))return; s+=2; if((p.model||'').toLowerCase().includes(tk))s+=4; if((p.type||'').toLowerCase().includes(tk))s+=3; if((p.brand||'').toLowerCase().includes(tk))s+=2; if((p.compatible||[]).some(c=>c.toLowerCase().includes(tk)))s+=1; });
     if(p.condition==='ok')s+=.5; return {p,s};
   }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  navIds = scored.map(x=>x.p.id);   // ordre pour Précédent/Suivant
   if (!scored.length) { out.innerHTML='<div class="empty"><div class="empty-ico">🤔</div><div class="empty-ttl">Aucun résultat</div><div class="empty-dsc">Essaie d\'autres termes.</div></div>'; return; }
   const mx=scored[0].s;
   out.innerHTML=`<div class="sec-lbl">${scored.length} résultat${scored.length>1?'s':''}</div>`+scored.map(({p,s})=>{
