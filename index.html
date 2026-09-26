@@ -613,6 +613,22 @@
 // STATE
 // ═══════════════════════════════════════════════════════
 let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ = '', prevScreen = 'inventory', curPartId = null, photos = [null,null], curCond = null, curBrand = null, curType = null, editPartId = null;
+
+// MODE PRÉSENTATION : flag transmis par le launcher (?present=1). Si actif, on affiche
+// de FAUSSES pièces et on bloque toute écriture (lecture seule) pour une démo.
+const PRESENT = (function(){ try { return new URLSearchParams(location.search).get('present')==='1'; } catch(e){ return false; } })();
+const DEMO_PARTS = [
+  {id:"p1",ref:"DEMO-EC1",type:"Écran",brand:"Apple",model:"iPhone 12",condition:"ok",notes:"Testé, tactile OK",historique:[],photos:[]},
+  {id:"p2",ref:"DEMO-BA1",type:"Batterie",brand:"Apple",model:"iPhone 11",condition:"ok",notes:"89% santé",historique:[],photos:[]},
+  {id:"p3",ref:"DEMO-EC2",type:"Écran",brand:"Samsung",model:"Galaxy S21",condition:"partial",notes:"Micro-rayures",historique:[],photos:[]},
+  {id:"p4",ref:"DEMO-CO1",type:"Connecteur charge",brand:"Apple",model:"iPhone 13",condition:"ok",notes:"",historique:[],photos:[]},
+  {id:"p5",ref:"DEMO-CA1",type:"Caméra",brand:"Apple",model:"iPhone 12 Pro",condition:"ok",notes:"Bloc arrière",historique:[],photos:[]},
+  {id:"p6",ref:"DEMO-BA2",type:"Batterie",brand:"Samsung",model:"Galaxy S20",condition:"partial",notes:"",historique:[],photos:[]},
+  {id:"p7",ref:"DEMO-EC3",type:"Écran",brand:"Apple",model:"iPhone 13 Pro",condition:"broken",notes:"Pour pièces",historique:[],photos:[]},
+  {id:"p8",ref:"DEMO-HP1",type:"Haut-parleur",brand:"Apple",model:"iPhone 11",condition:"ok",notes:"",historique:[],photos:[]},
+  {id:"p9",ref:"DEMO-NA1",type:"Nappe",brand:"Samsung",model:"Galaxy A54",condition:"ok",notes:"Nappe power",historique:[],photos:[]},
+  {id:"p10",ref:"DEMO-BO1",type:"Bouton",brand:"Apple",model:"iPhone 12",condition:"ok",notes:"",historique:[],photos:[]}
+];
 photos = [null,null,null,null];
 // Mode inventaire (pointage physique) : sessionStart = début de la session en cours.
 // Une pièce est « pointée cette session » si son pointeLe >= sessionStart.
@@ -699,6 +715,7 @@ function goBack() { go(prevScreen||'inventory'); }
 // FIRESTORE
 // ═══════════════════════════════════════════════════════
 function subscribe() {
+  if (PRESENT) { allParts = DEMO_PARTS.slice(); renderBrands(); renderTypes(); renderList(); updateCount(); return; }
   if (!db) return;
   db.collection('parts').orderBy('createdAt','desc').onSnapshot(snap => {
     allParts = snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -707,6 +724,7 @@ function subscribe() {
 }
 
 async function savePart() {
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   const brand=curBrand, model=document.getElementById('a-model').value.trim(), type=curType, notes=document.getElementById('a-notes').value.trim();
   if (!brand||!model||!type) { toast('⚠️ Marque, modèle et type requis'); return; }
   if (!curCond)               { toast("⚠️ Indique l'état"); return; }
@@ -728,6 +746,7 @@ async function savePart() {
 }
 
 async function deletePart(id) {
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   if (!confirm('Supprimer cette pièce ?')) return;
   const p = allParts.find(x=>x.id===id);
   try { await db.collection('parts').doc(id).delete(); logAudit('piece.suppr', p?p.ref||p.model:id, p?`${p.brand} ${p.model}`:''); toast('Supprimée'); go('inventory'); }
@@ -917,6 +936,7 @@ function renderPointageBar(parts) {
 }
 
 async function markPart(id, present) {
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   const p = allParts.find(x=>x.id===id); if (!p) return;
   const now = new Date().toISOString();
   const data = { present, pointeLe: now };
@@ -928,6 +948,7 @@ async function markPart(id, present) {
 }
 
 async function deleteAbsents() {
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   const absents = filteredParts().filter(p=>isPointed(p) && p.present===false);
   if (!absents.length) { toast('Aucune absente à supprimer'); return; }
   if (!confirm(`Supprimer définitivement ${absents.length} pièce(s) marquée(s) absente(s) ?`)) return;
@@ -973,6 +994,7 @@ function filterInv(v) { searchQ=v; renderList(); }
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function fmtHD(iso){try{return new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return iso||'';}}
 async function addHisto(){
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   const ta=document.getElementById('histo-input'); if(!ta) return;
   const texte=(ta.value||'').trim(); if(!texte) return;
   const p=allParts.find(x=>x.id===curPartId); if(!p) return;
@@ -985,6 +1007,7 @@ async function addHisto(){
   }catch(e){ toast('Erreur, réessaie'); }
 }
 async function delHisto(idx){
+  if(PRESENT){toast("Mode démo — lecture seule");return;} 
   const p=allParts.find(x=>x.id===curPartId); if(!p) return;
   const liste=(p.historique||[]).filter((_,i)=>i!==idx);
   try{
