@@ -7,24 +7,35 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="PartStack">
-  <meta name="theme-color" content="#F2F1EE">
+  <meta name="theme-color" content="#eef1f7">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <link rel="manifest" href="manifest.json">
   <title>PartStack</title>
+  <script>
+    (function(){try{var q=new URLSearchParams(location.search).get('theme');if(q==='dark'||q==='light')localStorage.setItem('ps_theme',q);
+      if((q||localStorage.getItem('ps_theme'))==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+  </script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
+    /* Palette StockVault (clair par défaut, « sombre adouci » via <html data-theme="dark">).
+       --accent = fonds pleins (boutons, sélection) · --on-acc = texte posé dessus · --acc-tx = accent utilisé comme texte. */
     :root {
-      --bg:       #F2F1EE;
+      --bg:       #eef1f7;
       --card:     #FFFFFF;
-      --text:     #111111;
-      --text2:    #666666;
-      --text3:    #AAAAAA;
-      --border:   rgba(0,0,0,0.07);
-      --accent:   #1A1A2E;
-      --acc-lt:   #EEEEF4;
+      --card2:    #f8f9fc;
+      --text:     #1a1f3a;
+      --text2:    #5b6280;
+      --text3:    #8b91ad;
+      --border:   #e1e5ee;
+      --border2:  #cdd2df;
+      --accent:   #1a1f3a;
+      --on-acc:   #FFFFFF;
+      --acc-tx:   #1a1f3a;
+      --acc-lt:   #eceff6;
+      --hero:     linear-gradient(135deg, #1a1f3a 0%, #2d1b69 60%, #1e2d6b 100%);
       --ok-bg:    #ECFDF5; --ok-tx:  #059669;  --ok-bd:  #6EE7B7;
       --par-bg:   #FFFBEB; --par-tx: #D97706;  --par-bd: #FCD34D;
       --hs-bg:    #FEF2F2; --hs-tx:  #DC2626;  --hs-bd:  #FCA5A5;
@@ -36,6 +47,24 @@
       --r-md:     14px;
       --r-lg:     18px;
       --r-xl:     22px;
+    }
+    :root[data-theme="dark"] {
+      --bg:       #262c4f;
+      --card:     #2e355c;
+      --card2:    #363e68;
+      --text:     #f4f5fb;
+      --text2:    rgba(244,245,251,0.72);
+      --text3:    rgba(244,245,251,0.48);
+      --border:   rgba(255,255,255,0.13);
+      --border2:  rgba(255,255,255,0.25);
+      --accent:   #4f5fe8;
+      --on-acc:   #FFFFFF;
+      --acc-tx:   #b3bcff;
+      --acc-lt:   rgba(143,156,255,0.16);
+      --ok-bg:    rgba(16,185,129,0.16);  --ok-tx:  #34d399; --ok-bd:  rgba(52,211,153,0.45);
+      --par-bg:   rgba(245,158,11,0.16);  --par-tx: #fbbf24; --par-bd: rgba(251,191,36,0.45);
+      --hs-bg:    rgba(239,68,68,0.16);   --hs-tx:  #f87171; --hs-bd:  rgba(248,113,113,0.45);
+      color-scheme: dark;
     }
 
     html, body { height:100%; height:100dvh; overflow:hidden; }
@@ -80,7 +109,7 @@
       width:34px; height:34px; border-radius:var(--r-sm);
       background:var(--bg); border:none; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
-      font-size:20px; color:var(--accent); flex-shrink:0;
+      font-size:20px; color:var(--acc-tx); flex-shrink:0;
       transition:opacity .1s, transform .1s;
     }
     .back-btn:active { opacity:.5; transform:translateX(-2px); }
@@ -96,13 +125,13 @@
     }
     .nb { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; cursor:pointer; color:var(--text3); font-size:11px; padding-top:2px; transition:color .15s; }
     .nb .ni { font-size:26px; line-height:1; transition:transform .15s; }
-    .nb.on { color:var(--accent); }
+    .nb.on { color:var(--acc-tx); }
     .nb.on .ni { transform:scale(1.1); }
     .nb:active { transform:scale(0.9); }
     .nav-fab {
       width:56px; height:56px; background:var(--accent); border-radius:18px;
       display:flex; align-items:center; justify-content:center;
-      border:none; cursor:pointer; color:#fff; font-size:32px;
+      border:none; cursor:pointer; color:var(--on-acc); font-size:32px;
       flex-shrink:0; margin:0 8px; margin-bottom:2px;
       transition:transform .12s, opacity .12s;
     }
@@ -144,7 +173,7 @@
     }
     .brand-btn:active { transform:scale(0.97); }
     .brand-btn.on { background:var(--accent); border-color:var(--accent); }
-    .brand-btn.on .brand-name { color:#fff; }
+    .brand-btn.on .brand-name { color:var(--on-acc); }
     .brand-btn.on .brand-cnt  { color:rgba(255,255,255,.45); }
     .brand-btn.on .brand-ic   { background:rgba(255,255,255,.12); }
 
@@ -163,7 +192,7 @@
     .tchip-row::-webkit-scrollbar { display:none; }
     .tchip { display:flex; align-items:center; gap:6px; flex-shrink:0; padding:8px 13px; background:var(--card); border:0.5px solid var(--border); border-radius:50px; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; transition:transform .1s; white-space:nowrap; }
     .tchip:active { transform:scale(0.96); }
-    .tchip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .tchip.on { background:var(--accent); border-color:var(--accent); color:var(--on-acc); }
     .tchip-cnt { font-size:11px; color:var(--text3); }
     .tchip.on .tchip-cnt { color:rgba(255,255,255,.5); }
 
@@ -221,7 +250,7 @@
     .photo-row { display:flex; flex-wrap:wrap; gap:12px; }
     .photo-slot {
       width:88px; height:88px; border-radius:var(--r-lg);
-      border:1.5px dashed rgba(0,0,0,.15); background:var(--card);
+      border:1.5px dashed var(--border2); background:var(--card);
       display:flex; align-items:center; justify-content:center;
       cursor:pointer; overflow:hidden; position:relative;
       transition:border-color .15s;
@@ -242,10 +271,10 @@
       font-size:13px; cursor:pointer; color:var(--text2);
       transition:background .15s, color .15s, border-color .15s;
     }
-    .ccheck.on { background:var(--acc-lt); color:var(--accent); border-color:var(--accent); }
+    .ccheck.on { background:var(--acc-lt); color:var(--acc-tx); border-color:var(--accent); }
 
     .btn-save {
-      width:100%; padding:17px; background:var(--accent); color:#fff;
+      width:100%; padding:17px; background:var(--accent); color:var(--on-acc);
       border:none; border-radius:var(--r-lg); font-size:16px; font-weight:700;
       cursor:pointer; font-family:inherit; margin-top:8px;
       transition:opacity .1s, transform .1s;
@@ -271,7 +300,7 @@
 
     /* ── NAV PRÉC/SUIV dans la fiche pièce ── */
     #detail-nav { display:none; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px calc(10px + var(--sab)); border-top:0.5px solid var(--border); background:var(--card); flex-shrink:0; }
-    .dnav-btn { border:none; background:var(--acc-lt); color:var(--accent); border-radius:10px; padding:9px 15px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .dnav-btn { border:none; background:var(--acc-lt); color:var(--acc-tx); border-radius:10px; padding:9px 15px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
     .dnav-btn:disabled { background:transparent; color:var(--text3); cursor:default; }
     .dnav-pos { font-size:12px; color:var(--text2); font-variant-numeric:tabular-nums; }
 
@@ -284,7 +313,7 @@
     .info-lbl { font-size:14px; color:var(--text2); flex:1; }
     .info-val { font-size:14px; font-weight:600; color:var(--text); text-align:right; max-width:65%; }
 
-    .ctag { display:inline-block; padding:5px 11px; background:var(--acc-lt); color:var(--accent); border-radius:var(--r-sm); font-size:12px; font-weight:600; margin:3px 3px 0 0; }
+    .ctag { display:inline-block; padding:5px 11px; background:var(--acc-lt); color:var(--acc-tx); border-radius:var(--r-sm); font-size:12px; font-weight:600; margin:3px 3px 0 0; }
 
     /* ── SEARCH ── */
     .srch-hdr { background:var(--card); padding:calc(10px + var(--sat)) 18px 16px; border-bottom:0.5px solid var(--border); flex-shrink:0; }
@@ -301,7 +330,7 @@
     .srch-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 18px 24px; min-height:0; }
     .srch-hint { font-size:13px; color:var(--text3); margin-bottom:14px; line-height:1.55; }
     .btn-srch {
-      width:100%; padding:15px; background:var(--accent); color:#fff;
+      width:100%; padding:15px; background:var(--accent); color:var(--on-acc);
       border:none; border-radius:var(--r-lg); font-size:15px; font-weight:700;
       cursor:pointer; font-family:inherit; margin-bottom:20px;
       transition:opacity .1s, transform .1s;
@@ -357,7 +386,7 @@
     .type-btn.on { background:var(--accent); border-color:var(--accent); }
     .type-btn .t-ic { font-size:20px; line-height:1; }
     .type-btn .t-nm { font-size:10px; font-weight:700; color:var(--text2); text-align:center; line-height:1.2; }
-    .type-btn.on .t-nm { color:#fff; }
+    .type-btn.on .t-nm { color:var(--on-acc); }
 
     /* ── REF PREVIEW ── */
     .ref-preview {
@@ -367,7 +396,7 @@
     }
     .ref-preview.show { display:flex; }
     .ref-preview-lbl { font-size:12px; color:var(--text3); flex-shrink:0; }
-    .ref-preview-val { font-size:16px; font-weight:700; color:var(--accent); font-family:'SF Mono','Courier New',monospace; }
+    .ref-preview-val { font-size:16px; font-weight:700; color:var(--acc-tx); font-family:'SF Mono','Courier New',monospace; }
 
     /* ── TOAST ── */
     #toast {
@@ -393,10 +422,10 @@
     .empty-dsc { font-size:14px; color:var(--text3); line-height:1.6; }
 
     /* ── MODE INVENTAIRE (pointage) ── */
-    .point-toggle { width:100%; margin-top:12px; padding:12px; border-radius:var(--r-md); border:0.5px solid var(--border); background:var(--card); color:var(--accent); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s,color .15s; }
-    .point-toggle.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .point-toggle { width:100%; margin-top:12px; padding:12px; border-radius:var(--r-md); border:0.5px solid var(--border); background:var(--card); color:var(--acc-tx); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s,color .15s; }
+    .point-toggle.on { background:var(--accent); color:var(--on-acc); border-color:var(--accent); }
     #pointage-bar { padding:14px 18px 2px; flex-shrink:0; }
-    .pbar-card { background:var(--accent); color:#fff; border-radius:var(--r-lg); padding:14px 16px; }
+    .pbar-card { background:var(--hero); color:#fff; border-radius:var(--r-lg); padding:14px 16px; }
     .pbar-stats { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:11px; gap:12px; }
     .pbar-big { font-size:23px; font-weight:700; line-height:1.1; }
     .pbar-lbl { font-size:12px; opacity:.65; margin-top:2px; }
@@ -416,16 +445,119 @@
     .pcard.is-absent  { border-color:var(--hs-bd); opacity:.55; }
     .pcard-seen { font-size:10px; color:var(--text3); margin-top:3px; }
 
-    /* Desktop frame — uniquement sur grand écran, jamais sur téléphone (plein écran garanti) */
-    @media (hover:hover) and (pointer:fine) and (min-width:768px) {
-      body { background:#D8D7D3; display:flex; align-items:center; justify-content:center; min-height:100dvh; }
-      #app { max-width:420px; width:100%; height:min(860px,96dvh); border-radius:40px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.2); }
-      #screen-setup { border-radius:40px; }
+    /* ── Photo dans la carte (grand écran seulement : le téléphone garde l'icône) ── */
+    .pcard-ic img { display:none; }
+    .theme-btn { width:34px; height:34px; border-radius:var(--r-sm); border:0.5px solid var(--border); background:var(--card2); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+    #side { display:none; }
+
+    /* ══ ÉCRAN LARGE (≥ 768 px) : plein écran, pièces en grille ══ */
+    @media (min-width:768px) {
+      #parts-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:10px; }
+      #parts-list > .empty { grid-column:1/-1; }
+      .pcard { margin-bottom:0; }
+      .pcard-name { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.25; }
+      .pcard-ic.has-img { overflow:hidden; background:var(--card2); }
+      .pcard-ic.has-img img { display:block; width:100%; height:100%; object-fit:cover; }
+      .pcard-ic.has-img .ic { display:none; }
+      #sr { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:9px; }
+      #sr > .sec-lbl, #sr > .empty { grid-column:1/-1; }
+      #sr .res-card { margin-bottom:0; }
+      .brand-grid { grid-template-columns:repeat(4,1fr); }
+      .type-grid { grid-template-columns:repeat(6,1fr); }
+    }
+    @media (hover:hover) and (min-width:768px) {
+      .pcard, .res-card { transition:transform .12s, border-color .15s, box-shadow .15s; }
+      .pcard:hover, .res-card:hover { border-color:var(--border2); box-shadow:0 4px 14px rgba(26,31,58,.08); }
+      .brand-btn:hover, .tchip:hover, .type-btn:hover, .cond-btn:hover, .ccheck:hover { border-color:var(--border2); }
+    }
+
+    /* ══ BUREAU (≥ 1100 px) : barre latérale · liste · fiche ══ */
+    @media (min-width:1100px) {
+      #app { display:grid; grid-template-columns:264px minmax(0,1fr); grid-template-rows:minmax(0,1fr); height:100dvh; }
+      #app.has-detail { grid-template-columns:264px minmax(0,1fr) 440px; }
+      #app > .screen { grid-column:2; grid-row:1; }
+      #nav, #launcher-btn { display:none !important; }
+      #toast { bottom:24px; }
+
+      /* Barre latérale */
+      #side { display:flex; flex-direction:column; grid-column:1; grid-row:1; background:var(--card); border-right:0.5px solid var(--border); min-height:0; }
+      .side-top { padding:18px 16px 14px; background:var(--hero); color:#fff; }
+      .side-logo { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+      .side-logo b { font-size:20px; font-weight:800; letter-spacing:-.01em; }
+      .side-logo span { font-size:12px; opacity:.7; }
+      .side-top .sbar { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.2); padding:9px 12px; }
+      .side-top .sbar input { color:#fff; font-size:14px; }
+      .side-top .sbar input::placeholder { color:rgba(255,255,255,.6); }
+      .side-top .sbar:focus-within { border-color:rgba(255,255,255,.6); }
+      .side-kbd { font-size:10px; border:1px solid rgba(255,255,255,.35); border-radius:5px; padding:1px 5px; opacity:.75; }
+      .side-scroll { flex:1; overflow-y:auto; padding:14px 12px; min-height:0; }
+      .side-add { width:100%; padding:12px; border:none; border-radius:var(--r-md); background:var(--accent); color:var(--on-acc); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; margin-bottom:10px; }
+      .side-add:hover { filter:brightness(1.12); }
+      .side-sec { font-size:11px; font-weight:700; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin:16px 6px 6px; }
+      .side-it { width:100%; display:flex; align-items:center; gap:9px; padding:8px 10px; border:none; background:none; border-radius:var(--r-sm); font-size:14px; color:var(--text); cursor:pointer; font-family:inherit; text-align:left; }
+      .side-it:hover { background:var(--card2); }
+      .side-it.on { background:var(--acc-lt); color:var(--acc-tx); font-weight:700; }
+      .side-it .si-ic { width:20px; text-align:center; flex-shrink:0; }
+      .side-it .si-nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .side-it .si-ct { font-size:12px; color:var(--text3); font-variant-numeric:tabular-nums; }
+      .side-foot { padding:12px; border-top:0.5px solid var(--border); display:flex; gap:8px; }
+      .side-foot button { flex:1; padding:9px; border:0.5px solid var(--border); border-radius:var(--r-sm); background:var(--card2); color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+      .side-foot button:hover { border-color:var(--border2); color:var(--text); }
+
+      /* Inventaire : les filtres sont dans la barre latérale */
+      #screen-inventory .inv-hdr .sbar, #screen-inventory .brand-wrap, #screen-inventory .type-wrap, .inv-theme { display:none; }
+      .inv-hdr { padding:20px 28px 16px; display:flex; align-items:center; gap:16px; }
+      .inv-hdr-top { margin-bottom:0; flex:1; justify-content:flex-start; gap:14px; align-items:baseline; }
+      .point-toggle { width:auto; margin-top:0; padding:10px 16px; }
+      .list-wrap { padding:18px 28px 32px; }
+      #pointage-bar { padding:16px 28px 0; }
+      .pcard.sel { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+
+      /* Fiche : panneau de droite (ne remplace plus la liste) */
+      #screen-detail { display:none; }
+      #screen-detail.open { display:flex; grid-column:3; grid-row:1; border-left:0.5px solid var(--border); background:var(--bg); animation:none; }
+      #screen-detail .hdr { padding:14px 16px 12px; }
+      #detail-nav { padding:10px 14px; }
+
+      /* Ajouter / modifier : formulaire centré sur deux colonnes */
+      #screen-add .hdr, #screen-search .srch-hdr { padding:20px 28px 16px; }
+      .add-scroll { padding:24px 28px 40px; }
+      .add-form { max-width:980px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; column-gap:28px; align-items:start; }
+      .add-form > .fgrp { margin-bottom:20px; }
+      .add-form > .span2 { grid-column:1/-1; }
+      .srch-body { padding:20px 28px 32px; }
+      .srch-body > .srch-hint, .srch-body > .btn-srch { max-width:520px; }
+      .srch-area { height:70px; }
     }
   </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- ══ BARRE LATÉRALE (bureau ≥ 1100 px uniquement) ══════ -->
+  <aside id="side">
+    <div class="side-top">
+      <div class="side-logo"><b>PartStack</b><span id="side-count"></span></div>
+      <div class="sbar">
+        <span style="font-size:14px;opacity:.8">🔍</span>
+        <input type="search" id="side-q" placeholder="Chercher une pièce…" oninput="sideSearch(this.value)" autocomplete="off">
+        <span class="side-kbd">/</span>
+      </div>
+    </div>
+    <div class="side-scroll">
+      <button class="side-add" onclick="go('add')">＋ Ajouter une pièce</button>
+      <button class="side-it" id="si-inv" onclick="go('inventory')"><span class="si-ic">📦</span><span class="si-nm">Inventaire</span></button>
+      <button class="side-it" id="si-srch" onclick="go('search')"><span class="si-ic">🧠</span><span class="si-nm">Recherche en langage libre</span></button>
+      <div class="side-sec">Marques</div>
+      <div id="side-brands"></div>
+      <div class="side-sec">Types</div>
+      <div id="side-types"></div>
+    </div>
+    <div class="side-foot">
+      <button onclick="toggleTheme()" id="side-theme">🌙 Sombre</button>
+      <button onclick="window.location.href='https://stockvault-sable.vercel.app/launcher'">🏠 Lanceur</button>
+    </div>
+  </aside>
 
   <!-- ══ SETUP ══════════════════════════════════════════════ -->
   <div id="screen-setup" class="screen" style="display:none"></div>
@@ -435,7 +567,10 @@
     <div class="inv-hdr">
       <div class="inv-hdr-top">
         <div class="inv-title">Inventaire</div>
-        <div class="inv-count" id="count-lbl">0 pièce</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="inv-count" id="count-lbl">0 pièce</div>
+          <button class="theme-btn inv-theme" onclick="toggleTheme()" aria-label="Changer de thème" id="inv-theme">🌙</button>
+        </div>
       </div>
       <div class="sbar">
         <span style="font-size:16px;color:var(--text3)">🔍</span>
@@ -467,7 +602,7 @@
       <button class="back-btn" onclick="go('inventory')">←</button>
       <div class="hdr-title" style="font-size:18px">Ajouter une pièce</div>
     </div>
-    <div class="add-scroll">
+    <div class="add-scroll"><div class="add-form">
       <div class="fgrp">
         <label class="flbl">Marque</label>
         <div class="brand-grid" style="margin-bottom:9px">
@@ -508,15 +643,15 @@
           <button class="cond-btn" data-v="broken"  onclick="selCond('broken')">❌ HS</button>
         </div>
       </div>
-      <div class="fgrp">
+      <div class="fgrp span2">
         <label class="flbl">Notes</label>
         <textarea id="a-notes" class="finp" placeholder="Ce qui marche / ne marche pas…"></textarea>
       </div>
-      <div class="fgrp" id="compat-sec" style="display:none">
+      <div class="fgrp span2" id="compat-sec" style="display:none">
         <label class="flbl">Compatible aussi avec</label>
         <div class="compat-wrap" id="compat-list"></div>
       </div>
-      <div class="fgrp">
+      <div class="fgrp span2">
         <label class="flbl" id="photo-lbl">Photos (max 4)</label>
         <div class="photo-row">
           <div class="photo-slot" id="ps0" onclick="trigPhoto(0)">
@@ -537,18 +672,20 @@
           </div>
         </div>
       </div>
+      <div class="span2">
       <div class="ref-preview" id="ref-preview">
         <span class="ref-preview-lbl">Référence :</span>
         <span class="ref-preview-val" id="ref-preview-val"></span>
       </div>
       <button class="btn-save" id="save-btn" onclick="savePart()">Enregistrer la pièce</button>
-    </div>
+      </div>
+    </div></div>
   </div>
 
   <!-- ══ DÉTAIL ════════════════════════════════════════════ -->
   <div id="screen-detail" class="screen">
     <div class="hdr">
-      <button class="back-btn" onclick="goBack()">←</button>
+      <button class="back-btn" id="detail-back" onclick="goBack()">←</button>
       <div class="hdr-title" id="detail-hdr" style="font-size:16px;font-family:monospace;font-weight:500"></div>
       <button class="back-btn" onclick="showEditForm(curPartId)" style="font-size:18px">✏️</button>
     </div>
@@ -700,16 +837,50 @@ function startApp(cfg) {
 // ROUTER
 // ═══════════════════════════════════════════════════════
 const SCREENS = ['setup','inventory','add','detail','search'];
+// Bureau (≥ 1100 px) : la fiche s'ouvre en panneau à droite au lieu de remplacer l'écran.
+const DESK = window.matchMedia('(min-width:1100px)');
+const isDesk = () => DESK.matches;
+let mainScreen = 'inventory';   // écran affiché dans la colonne centrale
 function go(name) {
+  if (isDesk() && name==='detail') { openDetailPanel(); return; }
   SCREENS.forEach(s => { const el=document.getElementById('screen-'+s); if(el){el.classList.remove('active');} });
   const t = document.getElementById('screen-'+name);
   if (t) { t.style.animation='none'; t.offsetHeight; t.style.animation=''; t.classList.add('active'); }
+  if (name!=='detail') mainScreen = name;
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   if (name==='inventory') document.getElementById('nb-inv')?.classList.add('on');
   if (name==='search')    document.getElementById('nb-srch')?.classList.add('on');
+  document.getElementById('si-inv')?.classList.toggle('on', name==='inventory');
+  document.getElementById('si-srch')?.classList.toggle('on', name==='search');
   if (name==='add' && !editPartId) resetAdd();
 }
-function goBack() { go(prevScreen||'inventory'); }
+function goBack() { if (isDesk()) closeDetailPanel(); else go(prevScreen||'inventory'); }
+function openDetailPanel() {
+  document.getElementById('screen-detail').classList.add('open');
+  document.getElementById('app').classList.add('has-detail');
+  const b=document.getElementById('detail-back'); if(b){ b.textContent='✕'; b.title='Fermer (Échap)'; }
+  markSelected();
+}
+function closeDetailPanel() {
+  document.getElementById('screen-detail').classList.remove('open');
+  document.getElementById('app').classList.remove('has-detail');
+  curPartId = null; markSelected();
+}
+function markSelected() { document.querySelectorAll('.pcard[data-id],.res-card[data-id]').forEach(c=>c.classList.toggle('sel', c.dataset.id===curPartId)); }
+// Passage téléphone ↔ bureau (rotation, redimensionnement de fenêtre) sans perdre la fiche ouverte.
+DESK.addEventListener('change', () => {
+  const det = document.getElementById('screen-detail'), b = document.getElementById('detail-back');
+  if (isDesk()) {
+    const wasDetail = det.classList.contains('active');
+    det.classList.remove('active');
+    if (wasDetail) { go(prevScreen==='search'?'search':'inventory'); if (curPartId) openDetailPanel(); }
+  } else {
+    if (b) { b.textContent='←'; b.title=''; }
+    const wasOpen = det.classList.contains('open');
+    det.classList.remove('open'); document.getElementById('app').classList.remove('has-detail');
+    if (wasOpen && curPartId) go('detail');
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 // FIRESTORE
@@ -720,6 +891,7 @@ function subscribe() {
   db.collection('parts').orderBy('createdAt','desc').onSnapshot(snap => {
     allParts = snap.docs.map(d=>({id:d.id,...d.data()}));
     renderBrands(); renderTypes(); renderList(); updateCount();
+    refreshOpenDetail();
   }, e=>{ console.error(e); toast('Erreur de sync'); });
 }
 
@@ -749,7 +921,7 @@ async function deletePart(id) {
   if(PRESENT){toast("Mode démo — lecture seule");return;} 
   if (!confirm('Supprimer cette pièce ?')) return;
   const p = allParts.find(x=>x.id===id);
-  try { await db.collection('parts').doc(id).delete(); logAudit('piece.suppr', p?p.ref||p.model:id, p?`${p.brand} ${p.model}`:''); toast('Supprimée'); go('inventory'); }
+  try { await db.collection('parts').doc(id).delete(); logAudit('piece.suppr', p?p.ref||p.model:id, p?`${p.brand} ${p.model}`:''); toast('Supprimée'); if (isDesk()) closeDetailPanel(); go('inventory'); }
   catch(e) { toast('Erreur'); }
 }
 
@@ -786,19 +958,24 @@ function renderBrands() {
     const name = isAll ? 'Toutes' : b;
     const cnt  = isAll ? allParts.length : (counts[b]||0);
     const cls  = `brand-btn${isAll?' brand-all':''}${brandFilter===b?' on':''}`;
-    return `<div class="${cls}" onclick="filterBrand('${b}',this)">
+    return `<div class="${cls}" onclick="filterBrand('${b}')">
       <div class="brand-ic">${ic}</div>
       <span class="brand-name">${name}</span>
       <span class="brand-cnt">${cnt}</span>
     </div>`;
   }).join('');
+  // Barre latérale (bureau)
+  const sb = document.getElementById('side-brands');
+  if (sb) sb.innerHTML = brands.map(b => {
+    const isAll = b==='all';
+    return `<button class="side-it${brandFilter===b?' on':''}" onclick="filterBrand('${b}')"><span class="si-ic">${isAll?'📦':(BRAND_IC[b]||'📱')}</span><span class="si-nm">${isAll?'Toutes les marques':b}</span><span class="si-ct">${isAll?allParts.length:(counts[b]||0)}</span></button>`;
+  }).join('');
 }
 
-function filterBrand(b, el) {
+function filterBrand(b) {
   brandFilter = b;
-  document.querySelectorAll('.brand-btn').forEach(x=>x.classList.remove('on'));
-  el.classList.add('on');
-  renderList();
+  renderBrands(); renderList();
+  if (isDesk() && mainScreen!=='inventory') go('inventory');
 }
 
 function renderTypes() {
@@ -813,15 +990,20 @@ function renderTypes() {
     const name= isAll ? 'Tous' : t;
     const cnt = isAll ? allParts.length : allParts.filter(p=>p.type===t).length;
     const cls = `tchip${typeFilter===t?' on':''}`;
-    return `<div class="${cls}" onclick="filterType('${t.replace(/'/g,"\\'")}',this)"><span>${ic}</span><span>${name}</span><span class="tchip-cnt">${cnt}</span></div>`;
+    return `<div class="${cls}" onclick="filterType('${t.replace(/'/g,"\\'")}')"><span>${ic}</span><span>${name}</span><span class="tchip-cnt">${cnt}</span></div>`;
+  }).join('');
+  const st = document.getElementById('side-types');
+  if (st) st.innerHTML = items.map(t => {
+    const isAll = t==='all';
+    const cnt = isAll ? allParts.length : allParts.filter(p=>p.type===t).length;
+    return `<button class="side-it${typeFilter===t?' on':''}" onclick="filterType('${t.replace(/'/g,"\\'")}')"><span class="si-ic">${isAll?'📦':(TYPE_IC[t]||'🔧')}</span><span class="si-nm">${isAll?'Tous les types':esc(t)}</span><span class="si-ct">${cnt}</span></button>`;
   }).join('');
 }
 
-function filterType(t, el) {
+function filterType(t) {
   typeFilter = t;
-  document.querySelectorAll('.tchip').forEach(x=>x.classList.remove('on'));
-  el.classList.add('on');
-  renderList();
+  renderTypes(); renderList();
+  if (isDesk() && mainScreen!=='inventory') go('inventory');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -845,9 +1027,14 @@ function filteredParts() {
 function isPointed(p) { return !!(p.pointeLe && (!sessionStart || p.pointeLe >= sessionStart)); }
 function fmtDay(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ''; } }
 
+// Icône du type ; sur grand écran, la 1re photo la remplace (le CSS masque la photo sur téléphone).
+function cardIc(p) {
+  const ph = (p.photos||[])[0];
+  return `<div class="pcard-ic${ph?' has-img':''}">${ph?`<img src="${optim(ph,240)}" alt="" loading="lazy">`:''}<span class="ic">${TYPE_IC[p.type]||'🔧'}</span></div>`;
+}
 function cardNormal(p) {
-  return `<div class="pcard" onclick="showDetail('${p.id}','inventory')">
-      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
+  return `<div class="pcard${p.id===curPartId?' sel':''}" data-id="${p.id}" onclick="showDetail('${p.id}','inventory')">
+      ${cardIc(p)}
       <div class="pcard-info">
         <div class="pcard-ref">${esc(p.ref||'')}</div>
         <div class="pcard-name">${esc(p.type)} — ${esc(p.model)}</div>
@@ -860,8 +1047,8 @@ function cardPointage(p) {
   const pointed = isPointed(p);
   const cls = `pcard${pointed&&p.present===true?' is-present':''}${pointed&&p.present===false?' is-absent':''}`;
   const seen = p.verifieLe ? `<div class="pcard-seen">✔︎ vérifiée ${fmtDay(p.verifieLe)}</div>` : `<div class="pcard-seen">jamais vérifiée</div>`;
-  return `<div class="${cls}">
-      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
+  return `<div class="${cls}${p.id===curPartId?' sel':''}" data-id="${p.id}">
+      ${cardIc(p)}
       <div class="pcard-info" onclick="showDetail('${p.id}','inventory')">
         <div class="pcard-ref">${esc(p.ref||'')}</div>
         <div class="pcard-name">${esc(p.type)} — ${esc(p.model)}</div>
@@ -885,6 +1072,7 @@ function renderList() {
   let list = parts;
   if (pointageMode && hidePointed) list = parts.filter(p=>!isPointed(p));
   navIds = list.map(p=>p.id);   // ordre pour Précédent/Suivant
+  if (curPartId) renderDetailNav();   // la barre Précédent/Suivant suit le filtre en cours
 
   const el = document.getElementById('parts-list');
   if (!list.length) {
@@ -984,8 +1172,10 @@ async function loadInventorySession() {
   } catch(e) { /* hors-ligne : sessionStart reste null → tout le pointage reste visible */ }
 }
 
-function updateCount() { const n=allParts.length; document.getElementById('count-lbl').textContent=n+' pièce'+(n!==1?'s':''); }
-function filterInv(v) { searchQ=v; renderList(); }
+function updateCount() { const n=allParts.length, t=n+' pièce'+(n!==1?'s':''); document.getElementById('count-lbl').textContent=t; const sc=document.getElementById('side-count'); if(sc) sc.textContent=t; }
+function filterInv(v) { searchQ=v; const sq=document.getElementById('side-q'); if(sq&&sq.value!==v) sq.value=v; renderList(); }
+// Recherche de la barre latérale = même filtre que l'inventaire (champs synchronisés).
+function sideSearch(v) { const iq=document.getElementById('inv-q'); if(iq) iq.value=v; if (mainScreen!=='inventory') go('inventory'); filterInv(v); }
 
 // ═══════════════════════════════════════════════════════
 // DETAIL
@@ -1019,7 +1209,22 @@ async function delHisto(idx){
 
 function showDetail(id,from) {
   prevScreen=from||'inventory'; curPartId=id;
-  const p=allParts.find(x=>x.id===id); if (!p) return;
+  if (!renderDetail(id)) return;
+  go('detail');
+  if (isDesk()) document.getElementById('detail-body').scrollTop = 0;
+}
+// Panneau ouvert sur bureau : suit les modifications (autre appareil, édition, suppression).
+function refreshOpenDetail() {
+  if (!isDesk() || !curPartId || !document.getElementById('screen-detail').classList.contains('open')) return;
+  if (!allParts.some(x=>x.id===curPartId)) { closeDetailPanel(); return; }
+  const ta=document.getElementById('histo-input'), brouillon=ta?ta.value:'', focus=document.activeElement===ta;
+  const sc=document.getElementById('detail-body').scrollTop;
+  renderDetail(curPartId);
+  const ta2=document.getElementById('histo-input'); if(ta2){ ta2.value=brouillon; if(focus) ta2.focus(); }
+  document.getElementById('detail-body').scrollTop=sc;
+}
+function renderDetail(id) {
+  const p=allParts.find(x=>x.id===id); if (!p) return false;
   document.getElementById('detail-hdr').textContent=p.ref||'Détail';
   const ph=(p.photos||[]).length?`<div class="thumb-row">${(p.photos||[]).map(s=>`<div class="thumb" onclick="openLb('${s}')"><img src="${optim(s,400)}" alt=""></div>`).join('')}</div>`:'';
   const cm=(p.compatible||[]).length?`<div style="margin-bottom:14px"><div class="sec-lbl" style="margin-bottom:8px">Compatible avec</div><div>${(p.compatible||[]).map(m=>`<span class="ctag">${m}</span>`).join('')}</div></div>`:'';
@@ -1035,7 +1240,7 @@ function showDetail(id,from) {
   const histoSection=`<div class="sec-lbl" style="margin:20px 0 8px">🔧 Historique / Réparations</div>
     <div class="info-block">${histRows}</div>
     <textarea id="histo-input" rows="2" placeholder="Ex : Testée OK, reconditionnée / défaut connecteur…" style="width:100%;box-sizing:border-box;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r-md);padding:11px 13px;color:var(--text);font-family:inherit;font-size:14px;resize:vertical"></textarea>
-    <button onclick="addHisto()" style="width:100%;margin-top:8px;padding:13px;border:0.5px solid var(--border);border-radius:var(--r-lg);background:var(--acc-lt);color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">➕ Ajouter au journal</button>`;
+    <button onclick="addHisto()" style="width:100%;margin-top:8px;padding:13px;border:0.5px solid var(--border);border-radius:var(--r-lg);background:var(--acc-lt);color:var(--acc-tx);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">➕ Ajouter au journal</button>`;
   document.getElementById('detail-body').innerHTML=`${ph}
     <div style="margin-bottom:4px">
       <div class="detail-ref">${p.ref||''}</div>
@@ -1056,7 +1261,7 @@ function showDetail(id,from) {
     ${histoSection}
     <button class="btn-del" onclick="deletePart('${p.id}')">🗑 Supprimer cette pièce</button>`;
   renderDetailNav();
-  go('detail');
+  return true;
 }
 
 // Barre Précédent/Suivant : suit la liste affichée (inventaire filtré ou recherche).
@@ -1229,8 +1434,8 @@ function smartSearch() {
   const mx=scored[0].s;
   out.innerHTML=`<div class="sec-lbl">${scored.length} résultat${scored.length>1?'s':''}</div>`+scored.map(({p,s})=>{
     const ok=s>=mx*.75;
-    return `<div class="res-card ${ok?'res-perfect':'res-close'}" onclick="showDetail('${p.id}','search')">
-      <div class="pcard-ic">${TYPE_IC[p.type]||'🔧'}</div>
+    return `<div class="res-card ${ok?'res-perfect':'res-close'}${p.id===curPartId?' sel':''}" data-id="${p.id}" onclick="showDetail('${p.id}','search')">
+      ${cardIc(p)}
       <div class="pcard-info">
         <div class="res-match">${ok?'✓ Correspondance parfaite':'~ Correspondance proche'}</div>
         <div class="pcard-ref">${p.ref||''}</div>
@@ -1241,6 +1446,40 @@ function smartSearch() {
     </div>`;
   }).join('');
 }
+
+// ═══════════════════════════════════════════════════════
+// THÈME (mêmes couleurs que StockVault) + RACCOURCIS CLAVIER
+// ═══════════════════════════════════════════════════════
+function syncThemeBtns() {
+  const dark = document.documentElement.getAttribute('data-theme')==='dark';
+  const s=document.getElementById('side-theme'); if(s) s.textContent = dark ? '☀️ Clair' : '🌙 Sombre';
+  const i=document.getElementById('inv-theme'); if(i) i.textContent = dark ? '☀️' : '🌙';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', dark ? '#262c4f' : '#eef1f7');
+}
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme')!=='dark';
+  if (dark) document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('ps_theme', dark?'dark':'light'); } catch(e) {}
+  syncThemeBtns();
+}
+syncThemeBtns();
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName||'').toLowerCase(), typing = tag==='input'||tag==='textarea'||tag==='select'||e.target.isContentEditable;
+  if (e.key==='Escape') {
+    if (document.getElementById('lb').classList.contains('open')) { closeLb(); return; }
+    if (typing) { e.target.blur(); return; }
+    if (isDesk() && document.getElementById('screen-detail').classList.contains('open')) { closeDetailPanel(); return; }
+    if (mainScreen==='add') { editPartId=null; go('inventory'); }
+    return;
+  }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key==='/') { e.preventDefault(); const q=document.getElementById(isDesk()?'side-q':'inv-q'); if(!isDesk()&&mainScreen!=='inventory') go('inventory'); q&&q.focus(); return; }
+  if ((e.key==='ArrowRight'||e.key==='ArrowLeft') && curPartId && (document.getElementById('screen-detail').classList.contains('open')||document.getElementById('screen-detail').classList.contains('active'))) {
+    const i=navIds.indexOf(curPartId), j=i+(e.key==='ArrowRight'?1:-1);
+    if (i>=0 && j>=0 && j<navIds.length) { e.preventDefault(); showDetail(navIds[j], prevScreen); }
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 // UTILS
