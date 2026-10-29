@@ -753,6 +753,7 @@ let db = null, allParts = [], brandFilter = 'all', typeFilter = 'all', searchQ =
 
 // MODE PRÉSENTATION : flag transmis par le launcher (?present=1). Si actif, on affiche
 // de FAUSSES pièces et on bloque toute écriture (lecture seule) pour une démo.
+let OPEN_PART = (function(){ try { return new URLSearchParams(location.search).get('part'); } catch(e){ return null; } })();
 const PRESENT = (function(){ try { return new URLSearchParams(location.search).get('present')==='1'; } catch(e){ return false; } })();
 const DEMO_PARTS = [
   {id:"p1",ref:"DEMO-EC1",type:"Écran",brand:"Apple",model:"iPhone 12",condition:"ok",notes:"Testé, tactile OK",historique:[],photos:[]},
@@ -892,6 +893,8 @@ function subscribe() {
     allParts = snap.docs.map(d=>({id:d.id,...d.data()}));
     renderBrands(); renderTypes(); renderList(); updateCount();
     refreshOpenDetail();
+    // ?part=<id> (clic sur un résultat de la recherche du launcher) : ouvre la fiche une seule fois.
+    if (OPEN_PART && allParts.some(p=>p.id===OPEN_PART)) { const id = OPEN_PART; OPEN_PART = null; showDetail(id,'inventory'); }
   }, e=>{ console.error(e); toast('Erreur de sync'); });
 }
 
