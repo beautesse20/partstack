@@ -803,7 +803,17 @@ const FIREBASE_CONFIG = {
 // ── Cloudinary (mêmes réglages que StockVault) : on stocke des URLs légères,
 //    plus de base64 dans Firestore → chargement de l'inventaire bien plus rapide.
 const CLOUDINARY = { cloud: "di6qnlcgy", preset: "sjfvdj53" };
-async function uploadCloudinary(dataUrl) {
+async // Règle de recherche commune (identique à lib/cherche des apps) : ni casse, accents,
+// tirets ni espaces ; mots dans n'importe quel ordre.
+function correspond(texte, q){
+  const plat=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const qc=plat(q).replace(/[^a-z0-9]/g,''); if(!qc) return false;
+  const t=plat(texte), tc=t.replace(/[^a-z0-9]/g,''); if(tc.includes(qc)) return true;
+  const mots=plat(q).split(/[^a-z0-9]+/).filter(Boolean); if(mots.length<2) return false;
+  const T=new Set(t.split(/[^a-z0-9]+/));
+  return mots.every(w=>w.length>=3?tc.includes(w):T.has(w));
+}
+function uploadCloudinary(dataUrl) {
   const fd = new FormData();
   fd.append("file", dataUrl);
   fd.append("upload_preset", CLOUDINARY.preset);
@@ -1018,11 +1028,7 @@ function filteredParts() {
   if (brandFilter!=='all') parts=parts.filter(p=>p.brand===brandFilter);
   if (typeFilter!=='all')  parts=parts.filter(p=>p.type===typeFilter);
   if (searchQ) {
-    const q=searchQ.toLowerCase(), qc=q.replace(/[^a-z0-9]/g,'');   // version sans séparateurs → "IP12ECR" trouve "IP12-ECR"
-    parts=parts.filter(p=>[p.model,p.brand,p.type,p.ref,p.notes].some(f=>{
-      const t=(f||'').toLowerCase();
-      return t.includes(q) || (qc.length>=2 && t.replace(/[^a-z0-9]/g,'').includes(qc));
-    }));
+    parts=parts.filter(p=>correspond([p.model,p.brand,p.type,p.ref,p.notes].join(' '),searchQ));
   }
   return parts;
 }
@@ -1430,6 +1436,7 @@ function smartSearch() {
     let s=0; const txt=[p.brand,p.model,p.type,p.notes,p.ref,...(p.compatible||[])].map(x=>(x||'').toLowerCase()).join(' ');
     const txtC=txt.replace(/[^a-z0-9]/g,'');   // recherche de réf sans séparateurs
     tokens.forEach(tk=>{ const tkc=tk.replace(/[^a-z0-9]/g,''); if(!txt.includes(tk) && !(tkc.length>=2 && txtC.includes(tkc)))return; s+=2; if((p.model||'').toLowerCase().includes(tk))s+=4; if((p.type||'').toLowerCase().includes(tk))s+=3; if((p.brand||'').toLowerCase().includes(tk))s+=2; if((p.compatible||[]).some(c=>c.toLowerCase().includes(tk)))s+=1; });
+    if(!s && correspond(txt,query)) s=2;   // mots mélangés / collés
     if(p.condition==='ok')s+=.5; return {p,s};
   }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
   navIds = scored.map(x=>x.p.id);   // ordre pour Précédent/Suivant
