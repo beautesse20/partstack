@@ -803,7 +803,7 @@ const FIREBASE_CONFIG = {
 // ── Cloudinary (mêmes réglages que StockVault) : on stocke des URLs légères,
 //    plus de base64 dans Firestore → chargement de l'inventaire bien plus rapide.
 const CLOUDINARY = { cloud: "di6qnlcgy", preset: "sjfvdj53" };
-async // Règle de recherche commune (identique à lib/cherche des apps) : ni casse, accents,
+// Règle de recherche commune (identique à lib/cherche des apps) : ni casse, accents,
 // tirets ni espaces ; mots dans n'importe quel ordre.
 function correspond(texte, q){
   const plat=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -813,7 +813,7 @@ function correspond(texte, q){
   const T=new Set(t.split(/[^a-z0-9]+/));
   return mots.every(w=>w.length>=3?tc.includes(w):T.has(w));
 }
-function uploadCloudinary(dataUrl) {
+async function uploadCloudinary(dataUrl) {
   const fd = new FormData();
   fd.append("file", dataUrl);
   fd.append("upload_preset", CLOUDINARY.preset);
